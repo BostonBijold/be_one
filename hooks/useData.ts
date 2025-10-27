@@ -45,6 +45,10 @@ export function useData(): UseDataResult {
       setLoading(true);
       setError(null);
 
+      // Ensure default routines and habits exist
+      console.log('useData - Ensuring default routines exist...');
+      await dataService.ensureDefaultRoutines();
+
       const [routinesData, habitsData, goalsData, todosData, dailyDataResult] =
         await Promise.all([
           dataService.getRoutines(),
@@ -53,6 +57,14 @@ export function useData(): UseDataResult {
           dataService.getTodos(),
           dataService.getTodayData(dataService.getTodayString()),
         ]);
+
+      console.log('useData - Data loaded from Firebase:', {
+        routines: routinesData,
+        habits: habitsData,
+        goals: goalsData,
+        todos: todosData,
+        dailyData: dailyDataResult
+      });
 
       setRoutines(routinesData);
       setHabits(habitsData);

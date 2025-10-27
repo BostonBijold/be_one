@@ -29,6 +29,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="routines"
+        options={{
+          title: 'Routines',
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="repeat" size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="habits"
         options={{
           title: 'Habits',

@@ -277,10 +277,17 @@ class DataService {
       const userDoc = await getDoc(userDocRef);
 
       if (!userDoc.exists()) {
+        console.log('dataService - User document does not exist, initializing...');
         return await this.initializeUserData();
       }
 
-      return userDoc.data() as CompleteUserData;
+      const userData = userDoc.data() as CompleteUserData;
+      console.log('dataService - getCurrentUserData retrieved:', {
+        hasRoutines: !!userData?.data?.routines,
+        routinesLength: userData?.data?.routines?.length,
+        routines: userData?.data?.routines
+      });
+      return userData;
     } catch (error: any) {
       console.error('Error getting user data:', error);
 
@@ -328,8 +335,37 @@ class DataService {
 
   // Specific Data Getters
   async getRoutines(): Promise<Routine[]> {
-    const userData = await this.getCurrentUserData();
-    return userData?.data?.routines || [];
+    try {
+      const userData = await this.getCurrentUserData();
+      const routines = userData?.data?.routines || [];
+
+      console.log('dataService - getRoutines - raw routines from Firebase:', routines);
+
+      // Normalize routines to handle legacy data structure
+      // (original web app stored habits as mixed types: numbers and strings)
+      const normalizedRoutines = routines.map(routine => {
+        const originalHabits = routine.habits || [];
+        const filteredHabits = Array.isArray(originalHabits)
+          ? originalHabits.filter(h => typeof h === 'number')
+          : [];
+
+        // Log if we had to filter out non-numeric values
+        if (Array.isArray(originalHabits) && originalHabits.length !== filteredHabits.length) {
+          console.log(`dataService - Normalized routine "${routine.name}": filtered ${originalHabits.length - filteredHabits.length} non-numeric habit IDs`);
+        }
+
+        return {
+          ...routine,
+          habits: filteredHabits
+        };
+      });
+
+      console.log('dataService - getRoutines returning:', normalizedRoutines);
+      return normalizedRoutines;
+    } catch (error) {
+      console.error('dataService - Error in getRoutines:', error);
+      return [];
+    }
   }
 
   async getHabits(): Promise<Habit[]> {
@@ -801,8 +837,14 @@ class DataService {
   // Ensure default routines exist for current user
   async ensureDefaultRoutines(): Promise<boolean> {
     try {
+      console.log('ensureDefaultRoutines - Starting...');
       const userData = await this.getCurrentUserData();
-      if (!userData) return false;
+      console.log('ensureDefaultRoutines - Got user data:', userData);
+
+      if (!userData) {
+        console.error('ensureDefaultRoutines - No user data found');
+        return false;
+      }
 
       const defaultRoutines: Routine[] = [
         {
@@ -833,12 +875,34 @@ class DataService {
 
       let needsUpdate = false;
 
-      // Check if we need to add any missing default routines
-      const existingRoutineIds = userData.data.routines.map(r => r.id);
-      const missingRoutines = defaultRoutines.filter(r => !existingRoutineIds.includes(r.id));
+      console.log('ensureDefaultRoutines - Current routines:', userData.data.routines);
+      console.log('ensureDefaultRoutines - Current data structure:', userData.data);
 
-      if (missingRoutines.length > 0) {
-        userData.data.routines = [...userData.data.routines, ...missingRoutines];
+      // Initialize routines array if it doesn't exist
+      if (!userData.data.routines || !Array.isArray(userData.data.routines)) {
+        console.log('ensureDefaultRoutines - Routines array missing or not array, initializing with defaults');
+        userData.data.routines = [...defaultRoutines];
+        needsUpdate = true;
+      } else if (userData.data.routines.length === 0) {
+        console.log('ensureDefaultRoutines - Routines array empty, adding defaults');
+        userData.data.routines = [...defaultRoutines];
+        needsUpdate = true;
+      } else {
+        // Check if we need to add any missing default routines
+        const existingRoutineIds = userData.data.routines.map(r => r.id);
+        const missingRoutines = defaultRoutines.filter(r => !existingRoutineIds.includes(r.id));
+
+        if (missingRoutines.length > 0) {
+          console.log('ensureDefaultRoutines - Adding missing routines:', missingRoutines);
+          userData.data.routines = [...userData.data.routines, ...missingRoutines];
+          needsUpdate = true;
+        }
+      }
+
+      // Ensure habits array exists
+      if (!userData.data.habits || !Array.isArray(userData.data.habits)) {
+        console.log('ensureDefaultRoutines - Habits array missing or not array, initializing');
+        userData.data.habits = [];
         needsUpdate = true;
       }
 
@@ -857,7 +921,11 @@ class DataService {
       }
 
       if (needsUpdate) {
+        console.log('ensureDefaultRoutines - Saving updated data to Firebase:', userData.data);
         await this.updateUserData(userData.data);
+        console.log('ensureDefaultRoutines - Successfully saved to Firebase');
+      } else {
+        console.log('ensureDefaultRoutines - No update needed');
       }
 
       return true;

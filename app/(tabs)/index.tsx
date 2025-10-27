@@ -1,98 +1,192 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import React from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  ActivityIndicator,
+  TouchableOpacity,
+  SafeAreaView,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useAuth } from '@/hooks/useAuth';
+import { useData } from '@/hooks/useData';
+import dataService from '@/services/dataService';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+export default function DashboardScreen() {
+  const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const { routines, habits, dailyData, loading, refetch } = useData();
 
-export default function HomeScreen() {
+  const getCompletionStats = () => {
+    if (!dailyData) return { completed: 0, total: 0 };
+
+    const completions = dailyData.habitCompletions || {};
+    const completed = Object.values(completions).filter((c: any) => c.completed).length;
+    const total = Object.keys(completions).length;
+
+    return { completed, total };
+  };
+
+  const { completed, total } = getCompletionStats();
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <SafeAreaView className="flex-1 bg-agm-stone">
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        style={{
+          paddingTop: insets.top,
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View className="px-6 py-6 bg-agm-dark">
+          <Text className="text-white text-3xl font-bold">Dashboard</Text>
+          <Text className="text-gray-300 mt-1">Welcome back, {user?.name || 'User'}!</Text>
+        </View>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        {loading ? (
+          <View className="flex-1 items-center justify-center py-12">
+            <ActivityIndicator size="large" color="#4b5320" />
+            <Text className="text-agm-dark mt-3">Loading your data...</Text>
+          </View>
+        ) : (
+          <View className="px-6 py-6">
+            {/* Stats Overview */}
+            <View className="bg-white rounded-lg p-4 mb-6 shadow-sm">
+              <View className="flex-row justify-between items-center mb-3">
+                <Text className="text-agm-dark font-semibold text-lg">Today's Progress</Text>
+                <View className="bg-agm-green rounded-full px-3 py-1">
+                  <Text className="text-white font-semibold">
+                    {total > 0 ? `${completed}/${total}` : '0/0'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Progress Bar */}
+              <View className="bg-gray-200 rounded-full h-3 overflow-hidden">
+                <View
+                  className="bg-agm-green h-full"
+                  style={{
+                    width: `${total > 0 ? (completed / total) * 100 : 0}%`,
+                  }}
+                />
+              </View>
+
+              <Text className="text-gray-600 text-sm mt-2">
+                {total === 0
+                  ? 'No habits tracked yet'
+                  : `${completed} of ${total} habits completed`}
+              </Text>
+            </View>
+
+            {/* Routines Section */}
+            {routines.length > 0 && (
+              <View className="mb-6">
+                <Text className="text-agm-dark font-bold text-xl mb-3">
+                  Routines ({routines.length})
+                </Text>
+
+                {routines.map((routine) => {
+                  const routineHabits = habits.filter((h) => h.routineId === routine.id);
+                  const routineCompletion = dailyData?.routineCompletions?.[routine.id];
+
+                  return (
+                    <View
+                      key={routine.id}
+                      className="bg-white rounded-lg p-4 mb-3 border-l-4"
+                      style={{ borderLeftColor: '#4b5320' }}
+                    >
+                      <View className="flex-row justify-between items-center mb-2">
+                        <View className="flex-1">
+                          <Text className="text-agm-dark font-semibold text-base">
+                            {routine.name}
+                          </Text>
+                          <Text className="text-gray-600 text-sm">
+                            {routineHabits.length} habits
+                          </Text>
+                        </View>
+                        <View
+                          className={`rounded-full px-3 py-1 ${
+                            routineCompletion?.completed
+                              ? 'bg-green-100'
+                              : 'bg-gray-100'
+                          }`}
+                        >
+                          <MaterialCommunityIcons
+                            name={routineCompletion?.completed ? 'check-circle' : 'circle'}
+                            size={20}
+                            color={routineCompletion?.completed ? '#22c55e' : '#9ca3af'}
+                          />
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* Single Habits Section */}
+            {habits.filter((h) => !h.routineId).length > 0 && (
+              <View className="mb-6">
+                <Text className="text-agm-dark font-bold text-xl mb-3">
+                  Single Habits ({habits.filter((h) => !h.routineId).length})
+                </Text>
+
+                {habits
+                  .filter((h) => !h.routineId)
+                  .slice(0, 5)
+                  .map((habit) => {
+                    const habitCompletion = dailyData?.habitCompletions?.[habit.id];
+
+                    return (
+                      <View key={habit.id} className="bg-white rounded-lg p-4 mb-2">
+                        <View className="flex-row justify-between items-center">
+                          <View className="flex-1">
+                            <Text className="text-agm-dark font-semibold">
+                              {habit.name}
+                            </Text>
+                            {habit.description && (
+                              <Text className="text-gray-600 text-sm mt-1">
+                                {habit.description}
+                              </Text>
+                            )}
+                          </View>
+                          <MaterialCommunityIcons
+                            name={habitCompletion?.completed ? 'check-circle' : 'circle'}
+                            size={24}
+                            color={
+                              habitCompletion?.completed ? '#4b5320' : '#d1d5db'
+                            }
+                          />
+                        </View>
+                      </View>
+                    );
+                  })}
+
+                {habits.filter((h) => !h.routineId).length > 5 && (
+                  <Text className="text-gray-600 text-sm text-center mt-2">
+                    +{habits.filter((h) => !h.routineId).length - 5} more habits
+                  </Text>
+                )}
+              </View>
+            )}
+
+            {/* Empty State */}
+            {routines.length === 0 && habits.length === 0 && (
+              <View className="bg-white rounded-lg p-6 items-center">
+                <MaterialCommunityIcons name="plus-circle-outline" size={48} color="#4b5320" />
+                <Text className="text-agm-dark font-semibold text-lg mt-3">
+                  Get Started!
+                </Text>
+                <Text className="text-gray-600 text-center mt-2">
+                  Create your first habit or routine to begin tracking your progress.
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});

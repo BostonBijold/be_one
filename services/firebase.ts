@@ -28,11 +28,13 @@ let app, auth, db, googleProvider;
 if (isFirebaseConfigured()) {
   try {
     app = initializeApp(firebaseConfig);
+    // Use getAuth() which works on both web and React Native
     auth = getAuth(app);
     db = getFirestore(app);
     googleProvider = new GoogleAuthProvider();
     googleProvider.addScope('profile');
     googleProvider.addScope('email');
+    console.log('Firebase initialized successfully');
   } catch (error) {
     console.error('Firebase initialization failed:', error);
   }

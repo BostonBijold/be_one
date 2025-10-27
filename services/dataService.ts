@@ -18,7 +18,6 @@ import {
 } from 'firebase/firestore';
 import { db } from './firebase';
 import authService from './authService';
-import NetInfo from '@react-native-community/netinfo';
 
 // Type Definitions
 export interface UserInfo {
@@ -259,15 +258,11 @@ class DataService {
     return userDoc.data() as CompleteUserData;
   }
 
-  // Check if online - React Native version
+  // Check if online - simplified version (assumes online, errors will be caught by Firebase)
   async isOnline(): Promise<boolean> {
-    try {
-      const state = await NetInfo.fetch();
-      return state.isConnected ?? false;
-    } catch (error) {
-      console.error('Error checking network status:', error);
-      return false;
-    }
+    // In a real app, you'd use @react-native-community/netinfo
+    // For now, we assume online and let Firebase handle connection errors
+    return true;
   }
 
   // Get current user data

@@ -960,22 +960,23 @@ export default function RoutinesScreen() {
                           {isExpanded && routineHabits.length > 0 && (
                             <View style={{ backgroundColor: '#f9fafb', borderBottomLeftRadius: 12, borderBottomRightRadius: 12, paddingHorizontal: 16, paddingVertical: 12, marginTop: -4 }}>
                               {routineHabits.map((habit) => {
-                                const habitCompletion = completion.habitTimes[habit.id];
+                                const habitCompletion = dailyData?.habitCompletions?.[habit.id];
+                                const habitTiming = completion.habitTimes?.[habit.id];
                                 return (
                                   <View key={habit.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' }}>
                                     <MaterialCommunityIcons
-                                      name={habitCompletion ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
+                                      name={habitCompletion?.completed ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
                                       size={20}
-                                      color={habitCompletion ? AGM_GREEN : '#999'}
+                                      color={habitCompletion?.completed ? AGM_GREEN : '#999'}
                                       style={{ marginRight: 10 }}
                                     />
                                     <View style={{ flex: 1 }}>
-                                      <Text style={{ fontSize: 14, color: AGM_DARK, textDecorationLine: habitCompletion ? 'line-through' : 'none' }}>
+                                      <Text style={{ fontSize: 14, color: AGM_DARK, textDecorationLine: habitCompletion?.completed ? 'line-through' : 'none' }}>
                                         {habit.name}
                                       </Text>
-                                      {habitCompletion && (
+                                      {habitTiming && (
                                         <Text style={{ fontSize: 11, color: '#666', marginTop: 2 }}>
-                                          Duration: {habitCompletion.duration ? Math.floor(habitCompletion.duration / 60) + 'min' : 'N/A'}
+                                          Duration: {habitTiming.duration ? Math.floor(habitTiming.duration / 1000) + 's' : 'N/A'}
                                         </Text>
                                       )}
                                     </View>

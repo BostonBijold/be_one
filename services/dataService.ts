@@ -126,6 +126,8 @@ export interface UserData {
   todos: Todo[];
   dailyData: { [date: string]: DailyData };
   dashboardOrder: DashboardOrderItem[];
+  weeklyVirtue?: string;
+  weeklyVirtueStartDate?: string;
 }
 
 export interface CompleteUserData {
@@ -383,6 +385,22 @@ class DataService {
     return userData?.data?.todos || [];
   }
 
+  // Get weekly virtue
+  async getWeeklyVirtue(): Promise<string | null> {
+    const userData = await this.getCurrentUserData();
+    return userData?.data?.weeklyVirtue || null;
+  }
+
+  // Update weekly virtue
+  async setWeeklyVirtue(virtue: string): Promise<void> {
+    const userData = await this.getCurrentUserData();
+    if (!userData) throw new Error('No user data found');
+
+    userData.data.weeklyVirtue = virtue;
+    userData.data.weeklyVirtueStartDate = new Date().toISOString().split('T')[0];
+    await this.updateUserData(userData.data);
+  }
+
   // Get today's daily data (habits, routines, todos)
   async getTodayData(todayString: string): Promise<DailyData | null> {
     const userData = await this.getCurrentUserData();
@@ -414,6 +432,14 @@ class DataService {
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  // Format a Date object to a date string (YYYY-MM-DD format)
+  formatDateString(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   }
 
@@ -984,36 +1010,47 @@ class DataService {
   }
 
   async deleteRoutine(routineId: number, keepHabitsAsSingles: boolean = false): Promise<boolean> {
+    console.log('DataService: deleteRoutine called with ID:', routineId, 'keepHabitsAsSingles:', keepHabitsAsSingles);
+
     const userData = await this.getCurrentUserData();
     if (!userData) throw new Error('No user data found');
 
     const routineIndex = userData.data.routines.findIndex(r => r.id === routineId);
+    console.log('Found routine at index:', routineIndex);
     if (routineIndex === -1) throw new Error('Routine not found');
 
     const routine = userData.data.routines[routineIndex];
+    console.log('Routine to delete:', routine);
 
-    // Handle habits in the routine
+    // Handle habits in the routine - use routine.habits array instead of routineId
     if (keepHabitsAsSingles) {
-      // Convert routine habits to single habits
-      const routineHabits = userData.data.habits.filter(h => h.routineId === routineId);
-      routineHabits.forEach(habit => {
-        habit.routineId = null;
-        habit.trackingType = habit.trackingType || 'simple'; // Default to simple if not set
+      // Convert routine habits to single habits by removing their association
+      routine.habits.forEach(habitId => {
+        const habit = userData.data.habits.find(h => h.id === habitId);
+        if (habit) {
+          habit.routineId = null;
+          habit.trackingType = habit.trackingType || 'simple';
+        }
       });
+      console.log('Converted habits to singles');
     } else {
       // Delete habits that belong to this routine
-      userData.data.habits = userData.data.habits.filter(h => h.routineId !== routineId);
+      userData.data.habits = userData.data.habits.filter(h => !routine.habits.includes(h.id));
+      console.log('Deleted routine habits');
     }
 
     // Remove routine
     userData.data.routines.splice(routineIndex, 1);
+    console.log('Removed routine from list');
 
     // Reorder remaining routines
     userData.data.routines.forEach((r, index) => {
       r.order = index;
     });
 
+    console.log('About to save updated data');
     await this.updateUserData(userData.data);
+    console.log('Data saved successfully');
     return true;
   }
 

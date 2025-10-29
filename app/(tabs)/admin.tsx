@@ -12,7 +12,7 @@ import {
   FlatList,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import dataService, { Challenge } from '@/services/dataService';
+import dataService, { Challenge, Virtue } from '@/services/dataService';
 import { useAuth } from '@/hooks/useAuth';
 
 const AGM_GREEN = '#4b5320';
@@ -24,9 +24,17 @@ export default function AdminScreen() {
   const [weeklyVirtue, setWeeklyVirtue] = useState<string>('');
   const [virtueInput, setVirtueInput] = useState<string>('');
   const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [virtues, setVirtues] = useState<Virtue[]>([]);
   const [loading, setLoading] = useState(true);
   const [showChallengeModal, setShowChallengeModal] = useState(false);
+  const [showVirtueModal, setShowVirtueModal] = useState(false);
   const [selectedVirtueForChallenge, setSelectedVirtueForChallenge] = useState<string>('');
+  const [virtueFormData, setVirtueFormData] = useState({
+    name: '',
+    shortDescription: '',
+    fullDescription: '',
+    order: 0,
+  });
   const [challengeFormData, setChallengeFormData] = useState({
     virtue: '',
     challenge: '',
@@ -41,19 +49,75 @@ export default function AdminScreen() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [virtue, challengesData] = await Promise.all([
+      const [virtue, challengesData, virtuesData] = await Promise.all([
         dataService.getWeeklyVirtue(),
         dataService.getChallenges(),
+        dataService.getVirtues(),
       ]);
 
       setWeeklyVirtue(virtue || '');
       setChallenges(challengesData);
+      setVirtues(virtuesData);
     } catch (err: any) {
       console.error('Error loading admin data:', err);
       Alert.alert('Error', 'Failed to load data');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle creating a virtue
+  const handleCreateVirtue = async () => {
+    if (
+      !virtueFormData.name.trim() ||
+      !virtueFormData.shortDescription.trim() ||
+      !virtueFormData.fullDescription.trim()
+    ) {
+      Alert.alert('Error', 'Please fill in all virtue fields');
+      return;
+    }
+
+    try {
+      const newVirtue = await dataService.addVirtue({
+        name: virtueFormData.name.trim(),
+        shortDescription: virtueFormData.shortDescription.trim(),
+        fullDescription: virtueFormData.fullDescription.trim(),
+        order: virtues.length,
+      });
+
+      setVirtues([...virtues, newVirtue]);
+      setVirtueFormData({ name: '', shortDescription: '', fullDescription: '', order: 0 });
+      setShowVirtueModal(false);
+      Alert.alert('Success', 'Virtue created!');
+    } catch (err: any) {
+      console.error('Error creating virtue:', err);
+      Alert.alert('Error', 'Failed to create virtue');
+    }
+  };
+
+  // Handle deleting a virtue
+  const handleDeleteVirtue = (virtueId: number) => {
+    Alert.alert(
+      'Delete Virtue',
+      'Are you sure you want to delete this virtue?',
+      [
+        { text: 'Cancel', onPress: () => {} },
+        {
+          text: 'Delete',
+          onPress: async () => {
+            try {
+              await dataService.deleteVirtue(virtueId);
+              setVirtues(virtues.filter((v) => v.id !== virtueId));
+              Alert.alert('Success', 'Virtue deleted!');
+            } catch (err: any) {
+              console.error('Error deleting virtue:', err);
+              Alert.alert('Error', 'Failed to delete virtue');
+            }
+          },
+          style: 'destructive',
+        },
+      ]
+    );
   };
 
   // Handle setting weekly virtue

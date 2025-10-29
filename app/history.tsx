@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import dataService, { Habit, DailyData } from '../../services/dataService';
+import dataService, { Habit, DailyData } from '../services/dataService';
 
 const AGM_GREEN = '#4b5320';
 const AGM_DARK = '#333333';

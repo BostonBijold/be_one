@@ -10,8 +10,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import authService from '../../services/authService';
-import dataService, { Habit, HabitCompletion } from '../../services/dataService';
+import authService from '../services/authService';
+import dataService, { Habit, HabitCompletion } from '../services/dataService';
 
 const AGM_GREEN = '#4b5320';
 const AGM_DARK = '#333333';

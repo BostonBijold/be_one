@@ -12,12 +12,23 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: AGM_GREEN,
-        tabBarInactiveTintColor: '#999999',
+        tabBarInactiveTintColor: '#666666',
         headerShown: false,
         tabBarStyle: {
           backgroundColor: '#f5f1e8',
           borderTopColor: '#e0ddd0',
           borderTopWidth: 1,
+          height: 70,
+          paddingBottom: 8,
+          paddingTop: 8,
+        },
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '600',
+          marginTop: 4,
+        },
+        tabBarIconStyle: {
+          marginBottom: 0,
         },
       }}
     >

@@ -50,6 +50,15 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="virtues"
+        options={{
+          title: 'Virtues',
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="heart" size={24} color={color} />
+          ),
+        }}
+      />
       {/* Habits and History tabs hidden - accessible from Routines tab */}
 
       {/* Admin Tab - Only visible to admin users */}

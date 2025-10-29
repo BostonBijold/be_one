@@ -5,6 +5,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   ActivityIndicator,
+  Image,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -236,13 +237,29 @@ export default function DashboardScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: AGM_STONE }}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={{ backgroundColor: AGM_DARK, paddingHorizontal: 24, paddingVertical: 32 }}>
-          <Text style={{ color: 'white', fontSize: 32, fontWeight: 'bold', marginBottom: 8 }}>
-            Dashboard
-          </Text>
-          <Text style={{ color: '#ccc', fontSize: 16 }}>
-            Welcome back, {user?.displayName || 'User'}!
-          </Text>
+        <View style={{ backgroundColor: AGM_DARK, paddingHorizontal: 24, paddingVertical: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          {/* Logo on the left */}
+          <View style={{ width: 40 }}>
+            <Image
+              source={require('@/assets/images/agm_logo_white.png')}
+              style={{ width: 40, height: 40, resizeMode: 'contain' }}
+            />
+          </View>
+
+          {/* App name in the center */}
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text style={{ color: 'white', fontSize: 24, fontWeight: 'bold' }}>
+              be one.
+            </Text>
+          </View>
+
+          {/* Settings menu on the right */}
+          <TouchableOpacity
+            onPress={() => router.push('/settings')}
+            style={{ width: 40, alignItems: 'flex-end' }}
+          >
+            <MaterialCommunityIcons name="account-circle" size={32} color={AGM_GREEN} />
+          </TouchableOpacity>
         </View>
 
         {/* Week's Virtue & Daily Challenge Combined Card */}

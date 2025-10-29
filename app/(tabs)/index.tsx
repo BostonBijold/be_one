@@ -29,6 +29,7 @@ export default function DashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedRoutines, setExpandedRoutines] = useState<number[]>([]);
+  const [weekVirtueObject, setWeekVirtueObject] = useState<any>(null);
 
   const todayString = dataService.getTodayString();
 
@@ -57,7 +58,7 @@ export default function DashboardScreen() {
         dataService.getRoutines(),
         dataService.getHabits(),
         dataService.getTodayData(todayString),
-        dataService.getWeeklyVirtue(),
+        dataService.getWeeklyVirtueObject(),
       ]);
 
       console.log('Dashboard - Data loaded:', {
@@ -66,44 +67,54 @@ export default function DashboardScreen() {
         habitsCount: habitsData.length,
         hasDailyData: !!dailyDataResult,
         dailyChallenge: dailyDataResult?.dailyChallenge,
-        weeklyVirtue: weeklyVirtueData,
+        weeklyVirtue: weeklyVirtueData?.name,
       });
 
       setRoutines(routinesData);
       setHabits(habitsData);
       setDailyData(dailyDataResult);
-      setWeeklyVirtue(weeklyVirtueData);
+      setWeeklyVirtue(weeklyVirtueData?.name || null);
+      setWeekVirtueObject(weeklyVirtueData);
 
-      // Auto-load daily challenge if not already set and weekly virtue exists
-      if (weeklyVirtueData && !dailyDataResult?.dailyChallenge) {
+      // Auto-load daily challenge if weekly virtue exists
+      // Always load/update challenge to match the current weekly virtue
+      if (weeklyVirtueData?.name) {
         try {
           const dayOfWeek = new Date().getDay();
-          const challenge = await dataService.getDailyChallengeForVirtue(weeklyVirtueData, dayOfWeek);
+          const challenge = await dataService.getDailyChallengeForVirtue(weeklyVirtueData.name, dayOfWeek);
 
+          // If we found a challenge, check if it's different from what's stored
           if (challenge) {
-            const updatedDailyData = dailyDataResult || {
-              habitCompletions: {},
-              routineCompletions: {},
-              todos: [],
-              virtueCheckIns: {},
-            };
+            const currentChallenge = dailyDataResult?.dailyChallenge;
+            const isDifferent = !currentChallenge || currentChallenge.virtue !== challenge.virtue;
 
-            updatedDailyData.dailyChallenge = {
-              challengeId: challenge.id,
-              virtue: challenge.virtue,
-              challenge: challenge.challenge,
-              difficulty: challenge.difficulty,
-              accepted: false,
-              completed: false,
-              acceptedAt: null,
-              completedAt: null,
-            };
+            if (isDifferent) {
+              const updatedDailyData = dailyDataResult || {
+                habitCompletions: {},
+                routineCompletions: {},
+                todos: [],
+                virtueCheckIns: {},
+              };
 
-            // Save the daily challenge to Firebase
-            await dataService.updateDailyData(todayString, updatedDailyData);
-            setDailyData(updatedDailyData);
+              updatedDailyData.dailyChallenge = {
+                challengeId: challenge.id,
+                virtue: challenge.virtue,
+                challenge: challenge.challenge,
+                difficulty: challenge.difficulty,
+                accepted: false,
+                completed: false,
+                acceptedAt: null,
+                completedAt: null,
+              };
 
-            console.log('Dashboard - Daily challenge loaded:', challenge);
+              // Save the daily challenge to Firebase
+              await dataService.updateDailyData(todayString, updatedDailyData);
+              setDailyData(updatedDailyData);
+
+              console.log('Dashboard - Daily challenge updated:', challenge);
+            }
+          } else {
+            console.log('Dashboard - No challenge found for virtue:', weeklyVirtueData.name);
           }
         } catch (err: any) {
           console.error('Dashboard - Error loading daily challenge:', err);

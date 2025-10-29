@@ -1,19 +1,18 @@
+import { useAuth } from '@/hooks/useAuth';
+import dataService, { Challenge, Virtue } from '@/services/dataService';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Alert,
   ActivityIndicator,
-  SafeAreaView,
+  Alert,
   Modal,
-  FlatList,
+  SafeAreaView,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import dataService, { Challenge, Virtue } from '@/services/dataService';
-import { useAuth } from '@/hooks/useAuth';
 
 const AGM_GREEN = '#4b5320';
 const AGM_DARK = '#333333';
@@ -22,13 +21,14 @@ const AGM_STONE = '#f5f1e8';
 export default function AdminScreen() {
   const { user } = useAuth();
   const [weeklyVirtue, setWeeklyVirtue] = useState<string>('');
-  const [virtueInput, setVirtueInput] = useState<string>('');
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [virtues, setVirtues] = useState<Virtue[]>([]);
   const [loading, setLoading] = useState(true);
   const [showChallengeModal, setShowChallengeModal] = useState(false);
   const [showVirtueModal, setShowVirtueModal] = useState(false);
   const [selectedVirtueForChallenge, setSelectedVirtueForChallenge] = useState<string>('');
+  const [isReorderMode, setIsReorderMode] = useState(false);
+  const [reorderingVirtues, setReorderingVirtues] = useState<Virtue[]>([]);
   const [virtueFormData, setVirtueFormData] = useState({
     name: '',
     shortDescription: '',
@@ -49,13 +49,13 @@ export default function AdminScreen() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [virtue, challengesData, virtuesData] = await Promise.all([
-        dataService.getWeeklyVirtue(),
+      const [virtueObj, challengesData, virtuesData] = await Promise.all([
+        dataService.getWeeklyVirtueObject(),
         dataService.getChallenges(),
         dataService.getVirtues(),
       ]);
 
-      setWeeklyVirtue(virtue || '');
+      setWeeklyVirtue(virtueObj?.name || '');
       setChallenges(challengesData);
       setVirtues(virtuesData);
     } catch (err: any) {
@@ -120,22 +120,60 @@ export default function AdminScreen() {
     );
   };
 
-  // Handle setting weekly virtue
-  const handleSetVirtue = async () => {
-    if (!virtueInput.trim()) {
-      Alert.alert('Error', 'Please enter a virtue name');
-      return;
-    }
+  // Enter reorder mode
+  const handleEnterReorderMode = () => {
+    setReorderingVirtues([...virtues]);
+    setIsReorderMode(true);
+  };
 
+  // Move virtue up in order
+  const handleMoveVirtueUp = (index: number) => {
+    if (index === 0) return;
+    const newVirtues = [...reorderingVirtues];
+    const temp = newVirtues[index];
+    newVirtues[index] = newVirtues[index - 1];
+    newVirtues[index - 1] = temp;
+
+    // Update order numbers
+    newVirtues.forEach((virtue, i) => {
+      virtue.order = i;
+    });
+    setReorderingVirtues(newVirtues);
+  };
+
+  // Move virtue down in order
+  const handleMoveVirtueDown = (index: number) => {
+    if (index === reorderingVirtues.length - 1) return;
+    const newVirtues = [...reorderingVirtues];
+    const temp = newVirtues[index];
+    newVirtues[index] = newVirtues[index + 1];
+    newVirtues[index + 1] = temp;
+
+    // Update order numbers
+    newVirtues.forEach((virtue, i) => {
+      virtue.order = i;
+    });
+    setReorderingVirtues(newVirtues);
+  };
+
+  // Save reorder
+  const handleSaveReorder = async () => {
     try {
-      await dataService.setWeeklyVirtue(virtueInput.trim());
-      setWeeklyVirtue(virtueInput.trim());
-      setVirtueInput('');
-      Alert.alert('Success', 'Weekly virtue updated!');
+      await dataService.reorderVirtues(reorderingVirtues);
+      setVirtues(reorderingVirtues);
+      setIsReorderMode(false);
+      setReorderingVirtues([]);
+      Alert.alert('Success', 'Virtue order updated!');
     } catch (err: any) {
-      console.error('Error setting virtue:', err);
-      Alert.alert('Error', 'Failed to set virtue');
+      console.error('Error reordering virtues:', err);
+      Alert.alert('Error', 'Failed to reorder virtues');
     }
+  };
+
+  // Cancel reorder
+  const handleCancelReorder = () => {
+    setIsReorderMode(false);
+    setReorderingVirtues([]);
   };
 
   // Handle creating a challenge
@@ -223,7 +261,7 @@ export default function AdminScreen() {
         {/* Weekly Virtue Section */}
         <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>
           <Text style={{ fontSize: 20, fontWeight: 'bold', color: AGM_DARK, marginBottom: 16 }}>
-            Weekly Virtue
+            This Week's Virtue
           </Text>
 
           {/* Current Virtue */}
@@ -234,55 +272,192 @@ export default function AdminScreen() {
               padding: 16,
               marginBottom: 16,
               borderLeftWidth: 4,
-              borderLeftColor: '#8b5cf6',
+              borderLeftColor: AGM_GREEN,
             }}
           >
-            <Text style={{ fontSize: 12, color: '#666666', marginBottom: 4 }}>
-              Current Virtue
+            <Text style={{ fontSize: 12, color: '#666666', marginBottom: 8 }}>
+              Current Focus Virtue (Auto-cycling)
             </Text>
+            {weeklyVirtue ? (
+              <>
+                <Text style={{ fontSize: 24, fontWeight: 'bold', color: AGM_DARK, marginBottom: 12 }}>
+                  {weeklyVirtue}
+                </Text>
+                <Text style={{ fontSize: 13, color: '#999999', fontStyle: 'italic' }}>
+                  Changes automatically each week based on your virtue list.
+                </Text>
+              </>
+            ) : (
+              <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+                <MaterialCommunityIcons name="lightbulb-outline" size={40} color="#d1d5db" />
+                <Text style={{ fontSize: 16, fontWeight: '600', color: AGM_DARK, marginTop: 12, textAlign: 'center' }}>
+                  No Virtues Yet
+                </Text>
+                <Text style={{ fontSize: 13, color: '#666666', marginTop: 8, textAlign: 'center' }}>
+                  Add virtues below to set up weekly rotation
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Manage Virtues Section */}
+        <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <Text style={{ fontSize: 20, fontWeight: 'bold', color: AGM_DARK }}>
-              {weeklyVirtue || 'Not set'}
+              A Good Man is ({virtues.length})
             </Text>
+            {!isReorderMode && virtues.length > 1 ? (
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity
+                  onPress={handleEnterReorderMode}
+                  style={{
+                    backgroundColor: '#8b5cf6',
+                    borderRadius: 8,
+                    width: 40,
+                    height: 40,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <MaterialCommunityIcons name="arrow-all" size={20} color="white" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowVirtueModal(true);
+                    setVirtueFormData({ name: '', shortDescription: '', fullDescription: '', order: virtues.length });
+                  }}
+                  style={{
+                    backgroundColor: AGM_GREEN,
+                    borderRadius: 8,
+                    width: 40,
+                    height: 40,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <MaterialCommunityIcons name="plus" size={24} color="white" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={() => {
+                  setShowVirtueModal(true);
+                  setVirtueFormData({ name: '', shortDescription: '', fullDescription: '', order: virtues.length });
+                }}
+                style={{
+                  backgroundColor: AGM_GREEN,
+                  borderRadius: 8,
+                  width: 40,
+                  height: 40,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <MaterialCommunityIcons name="plus" size={24} color="white" />
+              </TouchableOpacity>
+            )}
           </View>
 
-          {/* Set New Virtue */}
-          <View style={{ marginBottom: 24 }}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: AGM_DARK, marginBottom: 8 }}>
-              Set New Virtue
-            </Text>
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-              <TextInput
-                placeholder="Enter virtue name (e.g., Temperance)"
-                value={virtueInput}
-                onChangeText={setVirtueInput}
+          {isReorderMode && (
+            <View style={{ flexDirection: 'row', marginBottom: 16, gap: 8 }}>
+              <TouchableOpacity
+                onPress={handleSaveReorder}
                 style={{
                   flex: 1,
-                  borderWidth: 1,
-                  borderColor: '#e5e7eb',
+                  backgroundColor: AGM_GREEN,
                   borderRadius: 8,
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
-                  fontSize: 14,
-                  color: AGM_DARK,
+                  paddingVertical: 12,
+                  alignItems: 'center',
                 }}
-                placeholderTextColor="#999999"
-              />
+              >
+                <Text style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>
+                  Save Order
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleCancelReorder}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#f3f4f6',
+                  borderRadius: 8,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ color: AGM_DARK, fontWeight: '600', fontSize: 14 }}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              onPress={handleSetVirtue}
-              style={{
-                backgroundColor: '#8b5cf6',
-                borderRadius: 8,
-                paddingVertical: 12,
-                paddingHorizontal: 16,
-                alignItems: 'center',
-              }}
-            >
-              <Text style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>
-                Set Virtue
+          )}
+
+          {virtues.length === 0 ? (
+            <View style={{ padding: 24, alignItems: 'center' }}>
+              <MaterialCommunityIcons name="lightbulb-outline" size={48} color="#d1d5db" />
+              <Text style={{ fontSize: 16, fontWeight: '600', color: AGM_DARK, marginTop: 16, textAlign: 'center' }}>
+                No Virtues Yet
               </Text>
-            </TouchableOpacity>
-          </View>
+              <Text style={{ fontSize: 13, color: '#666666', marginTop: 8, textAlign: 'center' }}>
+                Add virtues as you research Benjamin Franklin's principles
+              </Text>
+            </View>
+          ) : (
+            (isReorderMode ? reorderingVirtues : virtues).map((virtue, index) => (
+              <View key={virtue.id} style={{ marginBottom: 12 }}>
+                <View
+                  style={{
+                    backgroundColor: 'white',
+                    borderRadius: 12,
+                    padding: 16,
+                    borderLeftWidth: 4,
+                    borderLeftColor: AGM_GREEN,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <View style={{ flex: 1, marginRight: 12 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: AGM_DARK, marginBottom: 6 }}>
+                        {virtue.order + 1}. {virtue.name}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: '#666666', marginBottom: 6, lineHeight: 18 }}>
+                        {virtue.shortDescription}
+                      </Text>
+                      {virtue.fullDescription && (
+                        <Text style={{ fontSize: 11, color: '#999999', fontStyle: 'italic', lineHeight: 16 }}>
+                          {virtue.fullDescription.substring(0, 80)}...
+                        </Text>
+                      )}
+                    </View>
+                    {isReorderMode ? (
+                      <View style={{ flexDirection: 'column', gap: 4 }}>
+                        <TouchableOpacity
+                          onPress={() => handleMoveVirtueUp(index)}
+                          disabled={index === 0}
+                          style={{ padding: 6, opacity: index === 0 ? 0.3 : 1 }}
+                        >
+                          <MaterialCommunityIcons name="chevron-up" size={24} color={index === 0 ? '#ccc' : AGM_GREEN} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => handleMoveVirtueDown(index)}
+                          disabled={index === (isReorderMode ? reorderingVirtues.length - 1 : virtues.length - 1)}
+                          style={{ padding: 6, opacity: index === (isReorderMode ? reorderingVirtues.length - 1 : virtues.length - 1) ? 0.3 : 1 }}
+                        >
+                          <MaterialCommunityIcons name="chevron-down" size={24} color={index === (isReorderMode ? reorderingVirtues.length - 1 : virtues.length - 1) ? '#ccc' : AGM_GREEN} />
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        onPress={() => handleDeleteVirtue(virtue.id)}
+                        style={{ padding: 8 }}
+                      >
+                        <MaterialCommunityIcons name="trash-can" size={20} color="#dc2626" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              </View>
+            ))
+          )}
         </View>
 
         {/* Challenges Section */}
@@ -548,6 +723,152 @@ export default function AdminScreen() {
 
                 <TouchableOpacity
                   onPress={() => setShowChallengeModal(false)}
+                  style={{
+                    backgroundColor: '#f3f4f6',
+                    borderRadius: 8,
+                    paddingVertical: 12,
+                    paddingHorizontal: 16,
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={{ color: AGM_DARK, fontWeight: '600', fontSize: 14 }}>
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </View>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Create Virtue Modal */}
+      <Modal
+        visible={showVirtueModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowVirtueModal(false)}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <View
+            style={{
+              flex: 1,
+              justifyContent: 'flex-end',
+              backgroundColor: 'transparent',
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: AGM_STONE,
+                borderTopLeftRadius: 24,
+                borderTopRightRadius: 24,
+                paddingHorizontal: 24,
+                paddingTop: 24,
+                paddingBottom: 32,
+              }}
+            >
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: AGM_DARK }}>
+                  Add Virtue
+                </Text>
+                <TouchableOpacity onPress={() => setShowVirtueModal(false)}>
+                  <MaterialCommunityIcons name="close" size={24} color={AGM_DARK} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView>
+                {/* Virtue Name Input */}
+                <Text style={{ fontSize: 14, fontWeight: '600', color: AGM_DARK, marginBottom: 8 }}>
+                  Virtue Name
+                </Text>
+                <TextInput
+                  placeholder="E.g., Temperance, Silence, Order"
+                  value={virtueFormData.name}
+                  onChangeText={(text) =>
+                    setVirtueFormData({ ...virtueFormData, name: text })
+                  }
+                  style={{
+                    borderWidth: 1,
+                    borderColor: '#e5e7eb',
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                    fontSize: 14,
+                    color: AGM_DARK,
+                    marginBottom: 16,
+                  }}
+                  placeholderTextColor="#999999"
+                />
+
+                {/* Short Description Input */}
+                <Text style={{ fontSize: 14, fontWeight: '600', color: AGM_DARK, marginBottom: 8 }}>
+                  Short Description
+                </Text>
+                <TextInput
+                  placeholder="Brief explanation (one sentence)"
+                  value={virtueFormData.shortDescription}
+                  onChangeText={(text) =>
+                    setVirtueFormData({ ...virtueFormData, shortDescription: text })
+                  }
+                  style={{
+                    borderWidth: 1,
+                    borderColor: '#e5e7eb',
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                    fontSize: 14,
+                    color: AGM_DARK,
+                    marginBottom: 16,
+                  }}
+                  placeholderTextColor="#999999"
+                  multiline
+                />
+
+                {/* Full Description Input */}
+                <Text style={{ fontSize: 14, fontWeight: '600', color: AGM_DARK, marginBottom: 8 }}>
+                  Full Description
+                </Text>
+                <TextInput
+                  placeholder="Detailed explanation of this virtue and its principles"
+                  value={virtueFormData.fullDescription}
+                  onChangeText={(text) =>
+                    setVirtueFormData({ ...virtueFormData, fullDescription: text })
+                  }
+                  style={{
+                    borderWidth: 1,
+                    borderColor: '#e5e7eb',
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    paddingVertical: 10,
+                    fontSize: 14,
+                    color: AGM_DARK,
+                    marginBottom: 24,
+                    minHeight: 120,
+                    textAlignVertical: 'top',
+                  }}
+                  placeholderTextColor="#999999"
+                  multiline
+                />
+
+                {/* Create Button */}
+                <TouchableOpacity
+                  onPress={handleCreateVirtue}
+                  style={{
+                    backgroundColor: AGM_GREEN,
+                    borderRadius: 8,
+                    paddingVertical: 12,
+                    paddingHorizontal: 16,
+                    alignItems: 'center',
+                    marginBottom: 12,
+                  }}
+                >
+                  <Text style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>
+                    Create Virtue
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Cancel Button */}
+                <TouchableOpacity
+                  onPress={() => setShowVirtueModal(false)}
                   style={{
                     backgroundColor: '#f3f4f6',
                     borderRadius: 8,

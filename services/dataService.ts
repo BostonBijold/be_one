@@ -58,6 +58,17 @@ export interface Virtue {
   createdAt: string;
 }
 
+export interface WeekAssignment {
+  weekKey: string; // Format: "2024-W01"
+  virtueId: number;
+  virtueOrder: number; // Order of virtue at time of assignment
+  name: string;
+}
+
+export interface WeekAssignments {
+  [weekKey: string]: WeekAssignment;
+}
+
 export interface Goal {
   id: number;
   name: string;
@@ -416,6 +427,70 @@ class DataService {
   }
 
   // Get all virtues from global config
+  // Helper: Get ISO week key for a date (format: "2024-W01")
+  private getWeekKey(date: Date = new Date()): string {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    const weekNum = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+    return `${d.getUTCFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+  }
+
+  // Get all week assignments from Firebase
+  private async getWeekAssignments(): Promise<WeekAssignments> {
+    try {
+      const configDoc = await getDoc(doc(db, 'config', 'weekAssignments'));
+      if (configDoc.exists()) {
+        return configDoc.data() as WeekAssignments || {};
+      }
+      return {};
+    } catch (error) {
+      console.error('Error getting week assignments:', error);
+      return {};
+    }
+  }
+
+  // Save week assignments to Firebase
+  private async saveWeekAssignments(assignments: WeekAssignments): Promise<void> {
+    try {
+      await setDoc(doc(db, 'config', 'weekAssignments'), assignments);
+    } catch (error) {
+      console.error('Error saving week assignments:', error);
+      throw error;
+    }
+  }
+
+  // Generate week assignments from virtues (for future weeks starting from today)
+  private generateFutureWeekAssignments(virtues: Virtue[], startingFromToday: boolean = true): { [weekKey: string]: WeekAssignment } {
+    if (virtues.length === 0) return {};
+
+    const assignments: { [weekKey: string]: WeekAssignment } = {};
+    const startDate = startingFromToday ? new Date() : new Date(new Date().getFullYear(), 0, 1);
+
+    // Generate assignments for the next 2 years (52 weeks * 2)
+    for (let i = 0; i < 104; i++) {
+      const date = new Date(startDate);
+      date.setDate(date.getDate() + i * 7);
+
+      const weekKey = this.getWeekKey(date);
+      // Only create assignments for weeks from today onwards
+      if (!startingFromToday || date >= new Date()) {
+        const virtueIndex = i % virtues.length;
+        const virtue = virtues[virtueIndex];
+
+        assignments[weekKey] = {
+          weekKey,
+          virtueId: virtue.id,
+          virtueOrder: virtue.order,
+          name: virtue.name,
+        };
+      }
+    }
+
+    return assignments;
+  }
+
   async getVirtues(): Promise<Virtue[]> {
     try {
       const configDoc = await getDoc(doc(db, 'config', 'virtues'));
@@ -444,6 +519,17 @@ class DataService {
       const updatedVirtues = [...virtues, newVirtue].sort((a, b) => a.order - b.order);
       await setDoc(doc(db, 'config', 'virtues'), { list: updatedVirtues });
 
+      // Generate future week assignments with the new virtue added
+      const existingAssignments = await this.getWeekAssignments();
+      const futureAssignments = this.generateFutureWeekAssignments(updatedVirtues, true);
+
+      // Merge existing (past) assignments with future assignments
+      const mergedAssignments = {
+        ...existingAssignments,
+        ...futureAssignments,
+      };
+      await this.saveWeekAssignments(mergedAssignments);
+
       return newVirtue;
     } catch (error) {
       console.error('Error adding virtue:', error);
@@ -466,6 +552,42 @@ class DataService {
     }
   }
 
+  // Reorder virtues and recalculate future week assignments
+  async reorderVirtues(virtues: Virtue[]): Promise<void> {
+    try {
+      // Save the reordered virtues
+      const orderedVirtues = virtues.sort((a, b) => a.order - b.order);
+      await setDoc(doc(db, 'config', 'virtues'), { list: orderedVirtues });
+
+      // Get existing assignments (to preserve past weeks)
+      const existingAssignments = await this.getWeekAssignments();
+
+      // Generate new future assignments with reordered virtues
+      const futureAssignments = this.generateFutureWeekAssignments(orderedVirtues, true);
+
+      // Keep past assignments, replace future ones
+      const currentWeek = this.getWeekKey();
+      const mergedAssignments: WeekAssignments = {};
+
+      // Keep past weeks
+      Object.entries(existingAssignments).forEach(([weekKey, assignment]) => {
+        if (weekKey < currentWeek) {
+          mergedAssignments[weekKey] = assignment;
+        }
+      });
+
+      // Add/replace future weeks
+      Object.entries(futureAssignments).forEach(([weekKey, assignment]) => {
+        mergedAssignments[weekKey] = assignment;
+      });
+
+      await this.saveWeekAssignments(mergedAssignments);
+    } catch (error) {
+      console.error('Error reordering virtues:', error);
+      throw error;
+    }
+  }
+
   // Delete a virtue
   async deleteVirtue(virtueId: number): Promise<void> {
     try {
@@ -475,28 +597,67 @@ class DataService {
         .sort((a, b) => a.order - b.order);
 
       await setDoc(doc(db, 'config', 'virtues'), { list: updatedVirtues });
+
+      // Recalculate future week assignments
+      const existingAssignments = await this.getWeekAssignments();
+      const currentWeek = this.getWeekKey();
+
+      // Generate future assignments with remaining virtues
+      const futureAssignments = this.generateFutureWeekAssignments(updatedVirtues, true);
+
+      // Keep past assignments, replace future ones
+      const mergedAssignments: WeekAssignments = {};
+
+      // Keep past weeks (including weeks that had the deleted virtue)
+      Object.entries(existingAssignments).forEach(([weekKey, assignment]) => {
+        if (weekKey < currentWeek) {
+          mergedAssignments[weekKey] = assignment;
+        }
+      });
+
+      // Add/replace future weeks
+      Object.entries(futureAssignments).forEach(([weekKey, assignment]) => {
+        mergedAssignments[weekKey] = assignment;
+      });
+
+      await this.saveWeekAssignments(mergedAssignments);
     } catch (error) {
       console.error('Error deleting virtue:', error);
       throw error;
     }
   }
 
-  // Get the weekly virtue based on current week number
+  // Get the weekly virtue based on stored week assignments
   async getWeeklyVirtueObject(): Promise<Virtue | null> {
     try {
       const virtues = await this.getVirtues();
       if (virtues.length === 0) return null;
 
-      // Calculate week number of the year
-      const now = new Date();
-      const start = new Date(now.getFullYear(), 0, 1);
-      const diff = now.getTime() - start.getTime();
-      const oneWeek = 1000 * 60 * 60 * 24 * 7;
-      const weekNumber = Math.floor(diff / oneWeek);
+      // Get the current week's assignment
+      const currentWeek = this.getWeekKey();
+      const assignments = await this.getWeekAssignments();
 
-      // Cycle through virtues based on week number
-      const virtueIndex = weekNumber % virtues.length;
-      return virtues[virtueIndex] || null;
+      // If assignment exists for current week, use it
+      if (assignments[currentWeek]) {
+        const assignment = assignments[currentWeek];
+        const virtue = virtues.find(v => v.id === assignment.virtueId);
+        if (virtue) return virtue;
+      }
+
+      // Fallback: if no assignment exists, generate one (for initial setup)
+      const futureAssignments = this.generateFutureWeekAssignments(virtues, true);
+      if (futureAssignments[currentWeek]) {
+        const assignment = futureAssignments[currentWeek];
+        const virtue = virtues.find(v => v.id === assignment.virtueId);
+        // Save the fallback assignment
+        if (virtue) {
+          const allAssignments = { ...assignments, ...futureAssignments };
+          await this.saveWeekAssignments(allAssignments);
+          return virtue;
+        }
+      }
+
+      return null;
     } catch (error) {
       console.error('Error getting weekly virtue object:', error);
       return null;

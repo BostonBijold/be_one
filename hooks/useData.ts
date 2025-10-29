@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from './useAuth';
 import dataService, {
-  Routine,
-  Habit,
-  Goal,
-  Todo,
   DailyData,
+  Goal,
+  Habit,
+  Routine,
+  Todo,
 } from '@/services/dataService';
+import { useCallback, useEffect, useState } from 'react';
+import { useAuth } from './useAuth';
 
 interface UseDataResult {
   routines: Routine[];
@@ -34,14 +34,29 @@ export function useData(): UseDataResult {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadData = async () => {
-    // Don't load data if user is not authenticated
-    if (!user || authLoading) {
+  const loadData = useCallback(async () => {
+    console.log('useData - loadData called', { user, authLoading });
+    
+    // Don't load if still authenticating
+    if (authLoading) {
+      console.log('useData - Waiting for auth to complete...');
+      return;
+    }
+
+    // Don't load if no user after auth is complete
+    if (!user) {
+      console.log('useData - No user, clearing data');
+      setRoutines([]);
+      setHabits([]);
+      setGoals([]);
+      setTodos([]);
+      setDailyData(null);
       setLoading(false);
       return;
     }
 
     try {
+      console.log('useData - Starting data load for user:', user.uid);
       setLoading(true);
       setError(null);
 
@@ -49,6 +64,7 @@ export function useData(): UseDataResult {
       console.log('useData - Ensuring default routines exist...');
       await dataService.ensureDefaultRoutines();
 
+      console.log('useData - Fetching all data...');
       const [routinesData, habitsData, goalsData, todosData, dailyDataResult] =
         await Promise.all([
           dataService.getRoutines(),
@@ -59,11 +75,12 @@ export function useData(): UseDataResult {
         ]);
 
       console.log('useData - Data loaded from Firebase:', {
+        routinesCount: routinesData.length,
         routines: routinesData,
-        habits: habitsData,
-        goals: goalsData,
-        todos: todosData,
-        dailyData: dailyDataResult
+        habitsCount: habitsData.length,
+        goalsCount: goalsData.length,
+        todosCount: todosData.length,
+        hasDailyData: !!dailyDataResult
       });
 
       setRoutines(routinesData);
@@ -71,17 +88,20 @@ export function useData(): UseDataResult {
       setGoals(goalsData);
       setTodos(todosData);
       setDailyData(dailyDataResult);
+      
+      console.log('useData - State updated successfully');
     } catch (err: any) {
-      console.error('Error loading data:', err);
+      console.error('useData - Error loading data:', err);
       setError(err?.message || 'Failed to load data');
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, authLoading]);
 
   useEffect(() => {
+    console.log('useData - useEffect triggered', { user: !!user, authLoading });
     loadData();
-  }, [user, authLoading]);
+  }, [loadData]);
 
   return {
     routines,

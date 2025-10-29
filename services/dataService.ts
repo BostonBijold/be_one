@@ -49,6 +49,15 @@ export interface Habit {
   createdAt: string;
 }
 
+export interface Virtue {
+  id: number;
+  name: string;
+  shortDescription: string;
+  fullDescription: string;
+  order: number;
+  createdAt: string;
+}
+
 export interface Goal {
   id: number;
   name: string;
@@ -83,8 +92,13 @@ export interface RoutineCompletion {
   habitTimes: { [habitId: number]: { startTime: string; endTime: string; duration: number } };
 }
 
+export interface VirtueCheckIn {
+  completed: boolean;
+  completedAt: string | null;
+}
+
 export interface VirtueCheckIns {
-  [virtue: string]: boolean;
+  [virtueId: number]: VirtueCheckIn;
 }
 
 export interface DailyChallenge {
@@ -401,6 +415,94 @@ class DataService {
     await this.updateUserData(userData.data);
   }
 
+  // Get all virtues from global config
+  async getVirtues(): Promise<Virtue[]> {
+    try {
+      const configDoc = await getDoc(doc(db, 'config', 'virtues'));
+      if (configDoc.exists()) {
+        const data = configDoc.data();
+        return data.list || [];
+      }
+      return [];
+    } catch (error) {
+      console.error('Error getting virtues:', error);
+      return [];
+    }
+  }
+
+  // Add a new virtue
+  async addVirtue(virtue: Omit<Virtue, 'id' | 'createdAt'>): Promise<Virtue> {
+    try {
+      const virtues = await this.getVirtues();
+      const newId = Math.max(...virtues.map(v => v.id), 0) + 1;
+      const newVirtue: Virtue = {
+        ...virtue,
+        id: newId,
+        createdAt: new Date().toISOString(),
+      };
+
+      const updatedVirtues = [...virtues, newVirtue].sort((a, b) => a.order - b.order);
+      await setDoc(doc(db, 'config', 'virtues'), { list: updatedVirtues });
+
+      return newVirtue;
+    } catch (error) {
+      console.error('Error adding virtue:', error);
+      throw error;
+    }
+  }
+
+  // Update a virtue
+  async updateVirtue(virtueId: number, updates: Partial<Virtue>): Promise<void> {
+    try {
+      const virtues = await this.getVirtues();
+      const updatedVirtues = virtues.map(v =>
+        v.id === virtueId ? { ...v, ...updates } : v
+      ).sort((a, b) => a.order - b.order);
+
+      await setDoc(doc(db, 'config', 'virtues'), { list: updatedVirtues });
+    } catch (error) {
+      console.error('Error updating virtue:', error);
+      throw error;
+    }
+  }
+
+  // Delete a virtue
+  async deleteVirtue(virtueId: number): Promise<void> {
+    try {
+      const virtues = await this.getVirtues();
+      const updatedVirtues = virtues
+        .filter(v => v.id !== virtueId)
+        .sort((a, b) => a.order - b.order);
+
+      await setDoc(doc(db, 'config', 'virtues'), { list: updatedVirtues });
+    } catch (error) {
+      console.error('Error deleting virtue:', error);
+      throw error;
+    }
+  }
+
+  // Get the weekly virtue based on current week number
+  async getWeeklyVirtueObject(): Promise<Virtue | null> {
+    try {
+      const virtues = await this.getVirtues();
+      if (virtues.length === 0) return null;
+
+      // Calculate week number of the year
+      const now = new Date();
+      const start = new Date(now.getFullYear(), 0, 1);
+      const diff = now.getTime() - start.getTime();
+      const oneWeek = 1000 * 60 * 60 * 24 * 7;
+      const weekNumber = Math.floor(diff / oneWeek);
+
+      // Cycle through virtues based on week number
+      const virtueIndex = weekNumber % virtues.length;
+      return virtues[virtueIndex] || null;
+    } catch (error) {
+      console.error('Error getting weekly virtue object:', error);
+      return null;
+    }
+  }
+
   // Get today's daily data (habits, routines, todos)
   async getTodayData(todayString: string): Promise<DailyData | null> {
     const userData = await this.getCurrentUserData();
@@ -665,6 +767,30 @@ class DataService {
       await this.updateDailyData(todayString, todayData);
     } catch (error) {
       console.error('Error updating habit completions:', error);
+      throw error;
+    }
+  }
+
+  // Update today's virtue check-ins
+  async updateTodayVirtueCheckIns(virtueCheckIns: { [virtueId: number]: VirtueCheckIn }, todayString: string): Promise<void> {
+    try {
+      const online = await this.isOnline();
+      if (!online) {
+        throw new Error('No internet connection. Changes will be saved when you reconnect.');
+      }
+
+      const todayData = await this.getTodayData(todayString) || {
+        habitCompletions: {},
+        routineCompletions: {},
+        todos: [],
+        virtueCheckIns: {}
+      };
+
+      // Merge new virtue check-in data with existing data
+      todayData.virtueCheckIns = { ...todayData.virtueCheckIns, ...virtueCheckIns };
+      await this.updateDailyData(todayString, todayData);
+    } catch (error) {
+      console.error('Error updating virtue check-ins:', error);
       throw error;
     }
   }

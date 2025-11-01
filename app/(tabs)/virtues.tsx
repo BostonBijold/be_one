@@ -10,6 +10,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AppHeader from '@/components/AppHeader';
 import dataService, { Virtue, VirtueCheckIn } from '@/services/dataService';
 
 const AGM_GREEN = '#4b5320';
@@ -22,7 +23,7 @@ export default function VirtuesScreen() {
   const [loading, setLoading] = useState(true);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [completedCount, setCompletedCount] = useState(0);
-  const [viewMode, setViewMode] = useState<'start' | 'checklist'>('start');
+  const [viewMode, setViewMode] = useState<'start' | 'checklist' | 'summary'>('start');
   const [showHistoryDrawer, setShowHistoryDrawer] = useState(false);
   const [currentVirtueIndex, setCurrentVirtueIndex] = useState(0);
   const [weeklyData, setWeeklyData] = useState<{ [date: string]: { [virtueId: number]: VirtueCheckIn } }>({});
@@ -181,12 +182,8 @@ export default function VirtuesScreen() {
   if (viewMode === 'start') {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: AGM_STONE }}>
-        {/* Fixed Header */}
-        <View style={{ backgroundColor: AGM_DARK, paddingHorizontal: 24, paddingVertical: 20, borderBottomWidth: 1, borderBottomColor: '#444' }}>
-          <Text style={{ color: 'white', fontSize: 26, fontWeight: 'bold' }}>
-            Daily Virtue Check-in
-          </Text>
-        </View>
+        {/* App Header */}
+        <AppHeader />
 
         <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 24 }} showsVerticalScrollIndicator={false}>
           {/* Spacer for visual balance */}
@@ -402,7 +399,7 @@ export default function VirtuesScreen() {
     );
   }
 
-  // Checklist view - one virtue at a time
+  // Checklist view - one virtue at a time (Music Player Style)
   if (viewMode === 'checklist') {
     const virtue = virtues[currentVirtueIndex];
     const isCompleted = todayCheckIns[virtue?.id]?.completed || false;
@@ -410,255 +407,346 @@ export default function VirtuesScreen() {
 
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: AGM_STONE }}>
-        {/* Fixed Header */}
-        <View style={{ backgroundColor: AGM_DARK, paddingHorizontal: 24, paddingVertical: 20, borderBottomWidth: 1, borderBottomColor: '#444' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <Text style={{ color: 'white', fontSize: 26, fontWeight: 'bold' }}>
-              Check-in
-            </Text>
-            <TouchableOpacity onPress={() => handleFinishCheckin()}>
-              <MaterialCommunityIcons name="close" size={28} color="white" />
-            </TouchableOpacity>
-          </View>
+        {/* App Header */}
+        <AppHeader />
 
-          {/* Progress Bar */}
-          <View style={{ height: 6, backgroundColor: '#555555', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
-            <View
-              style={{
-                width: `${((currentVirtueIndex + 1) / virtues.length) * 100}%`,
-                height: '100%',
-                backgroundColor: AGM_GREEN,
-              }}
-            />
+        {/* Progress indicator */}
+        <View style={{ backgroundColor: AGM_DARK, paddingHorizontal: 24, paddingVertical: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+            <TouchableOpacity onPress={() => handleFinishCheckin()} style={{ marginRight: 12 }}>
+              <MaterialCommunityIcons name="chevron-left" size={28} color="white" />
+            </TouchableOpacity>
+            <Text style={{ color: '#ccc', fontSize: 14, flex: 1 }}>
+              {currentVirtueIndex + 1} of {virtues.length} virtues
+            </Text>
           </View>
-          <Text style={{ color: '#ccc', fontSize: 13 }}>
-            {currentVirtueIndex + 1} of {virtues.length}
-          </Text>
         </View>
 
-        <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 24, justifyContent: 'center' }} showsVerticalScrollIndicator={false}>
-          {/* Virtue Card */}
-          <View style={{
-            backgroundColor: 'white',
-            borderRadius: 20,
-            padding: 28,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.12,
-            shadowRadius: 12,
-            elevation: 6,
-            borderLeftWidth: 4,
-            borderLeftColor: AGM_GREEN,
-            marginBottom: 24,
-          }}>
-            {/* Virtue Icon */}
-            <View style={{ alignItems: 'center', marginBottom: 20 }}>
-              <View style={{
-                width: 80,
-                height: 80,
-                borderRadius: 40,
-                backgroundColor: AGM_STONE,
+        {/* Music Player Style Virtue Display - Expands to fill screen */}
+        {virtue && (
+          <View style={{ flex: 1, paddingHorizontal: 16, paddingTop: 24, paddingBottom: 24 }}>
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: 'white',
+                borderRadius: 20,
+                padding: 32,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.15,
+                shadowRadius: 12,
+                elevation: 8,
                 alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <MaterialCommunityIcons name="lightbulb-on" size={44} color={AGM_GREEN} />
-              </View>
-            </View>
+                justifyContent: 'space-between',
+              }}
+            >
+              {/* Content Section */}
+              <View style={{ flex: 1, width: '100%', justifyContent: 'flex-start' }}>
+                {/* 1. Icon - At Top */}
+                <View
+                  style={{
+                    alignItems: 'center',
+                    marginBottom: 16,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 100,
+                      height: 100,
+                      borderRadius: 50,
+                      backgroundColor: AGM_STONE,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <MaterialCommunityIcons name="lightbulb-on" size={60} color={AGM_GREEN} />
+                  </View>
+                </View>
 
-            {/* Virtue Name */}
-            <Text style={{
-              fontSize: 28,
-              fontWeight: '800',
-              color: AGM_GREEN,
-              marginBottom: 12,
-              textAlign: 'center',
-            }}>
-              {virtue?.name}
-            </Text>
+                {/* 2. Virtue Name */}
+                <Text style={{ fontSize: 24, fontWeight: 'bold', color: AGM_DARK, textAlign: 'center', marginBottom: 8 }}>
+                  {virtue.name}
+                </Text>
 
-            {/* Short Description */}
-            <Text style={{
-              fontSize: 15,
-              color: '#555',
-              marginBottom: 20,
-              textAlign: 'center',
-              lineHeight: 24,
-              fontWeight: '500',
-            }}>
-              {virtue?.shortDescription}
-            </Text>
+                {/* 3. Short Description */}
+                <Text style={{ fontSize: 14, color: '#666666', textAlign: 'center', marginBottom: 16, lineHeight: 21 }}>
+                  {virtue.shortDescription}
+                </Text>
 
-            {/* Divider */}
-            <View style={{ height: 1, backgroundColor: '#e5e7eb', marginBottom: 20 }} />
+                {/* 4. Full Description - Always Visible, Scrollable */}
+                <ScrollView
+                  contentContainerStyle={{ paddingBottom: 16 }}
+                  showsVerticalScrollIndicator={false}
+                  style={{ flex: 1, marginBottom: 16 }}
+                >
+                  <Text style={{
+                    fontSize: 14,
+                    color: '#555',
+                    lineHeight: 22,
+                    textAlign: 'center',
+                  }}>
+                    {virtue.fullDescription}
+                  </Text>
+                </ScrollView>
 
-            {/* Full Description */}
-            {!showFullDescription ? (
-              <TouchableOpacity
-                onPress={() => setShowFullDescription(true)}
-                style={{
-                  paddingVertical: 12,
-                  paddingHorizontal: 16,
-                  backgroundColor: AGM_STONE,
-                  borderRadius: 12,
-                  alignItems: 'center',
-                }}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                  <MaterialCommunityIcons name="chevron-down" size={20} color={AGM_GREEN} />
-                  <Text style={{ fontSize: 13, color: AGM_GREEN, fontWeight: '700', marginLeft: 6 }}>
-                    Read Full Description
+                {/* 5. Question - With padding */}
+                <View style={{ paddingVertical: 16, marginBottom: 16 }}>
+                  <Text style={{ fontSize: 16, color: '#666666', textAlign: 'center', lineHeight: 24 }}>
+                    Did you practice{' '}
+                    <Text style={{ color: AGM_GREEN, fontWeight: 'bold' }}>
+                      {virtue.name}
+                    </Text>
+                    {' '}today?
                   </Text>
                 </View>
-              </TouchableOpacity>
-            ) : (
-              <View>
-                <Text style={{
-                  fontSize: 15,
-                  color: '#444',
-                  lineHeight: 24,
-                  marginBottom: 16,
-                  fontWeight: '400',
-                }}>
-                  {virtue?.fullDescription}
-                </Text>
+              </View>
+
+              {/* Player Controls */}
+              <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', width: '100%', gap: 12 }}>
+                {/* Previous Button */}
                 <TouchableOpacity
-                  onPress={() => setShowFullDescription(false)}
-                  style={{ alignSelf: 'center' }}
+                  onPress={handlePrevious}
+                  disabled={currentVirtueIndex === 0}
+                  style={{
+                    flex: 0.9,
+                    paddingHorizontal: 20,
+                    paddingVertical: 12,
+                    borderRadius: 12,
+                    backgroundColor: currentVirtueIndex === 0 ? '#e5e7eb' : '#f0f0f0',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    borderWidth: 1.5,
+                    borderColor: currentVirtueIndex === 0 ? '#d1d5db' : '#e5e7eb',
+                  }}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <MaterialCommunityIcons name="chevron-up" size={20} color={AGM_GREEN} />
-                    <Text style={{ fontSize: 13, color: AGM_GREEN, fontWeight: '700', marginLeft: 6 }}>
-                      Show Less
-                    </Text>
-                  </View>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: currentVirtueIndex === 0 ? '#999999' : AGM_DARK }}>
+                    Previous
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Yes Button - Larger */}
+                <TouchableOpacity
+                  onPress={() => {
+                    const newState = !isCompleted;
+                    handleToggleVirtue(virtue);
+
+                    // Auto advance only if newly marking as completed
+                    if (newState) {
+                      setTimeout(() => {
+                        if (isLastVirtue) {
+                          setViewMode('summary');
+                        } else {
+                          handleNext();
+                        }
+                      }, 300);
+                    }
+                  }}
+                  style={{
+                    flex: 1.2,
+                    paddingHorizontal: 20,
+                    paddingVertical: 14,
+                    borderRadius: 12,
+                    backgroundColor: isCompleted ? AGM_GREEN : '#f3f4f6',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    borderWidth: 2,
+                    borderColor: isCompleted ? AGM_GREEN : '#e5e7eb',
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 8,
+                    elevation: 6,
+                  }}
+                >
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: isCompleted ? 'white' : AGM_GREEN }}>
+                    Yes
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Needs Work Button */}
+                <TouchableOpacity
+                  onPress={() => {
+                    if (isCompleted) {
+                      handleToggleVirtue(virtue);
+                    }
+                    // Auto advance when done
+                    setTimeout(() => {
+                      if (isLastVirtue) {
+                        setViewMode('summary');
+                      } else {
+                        handleNext();
+                      }
+                    }, 300);
+                  }}
+                  style={{
+                    flex: 0.9,
+                    paddingHorizontal: 20,
+                    paddingVertical: 12,
+                    borderRadius: 12,
+                    backgroundColor: '#f0f0f0',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    borderWidth: 1.5,
+                    borderColor: '#e5e7eb',
+                  }}
+                >
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: AGM_DARK }}>
+                    Needs Work
+                  </Text>
                 </TouchableOpacity>
               </View>
-            )}
+            </View>
           </View>
+        )}
+      </SafeAreaView>
+    );
+  }
 
-          {/* Question */}
-          <Text style={{
-            fontSize: 18,
-            fontWeight: '600',
-            color: AGM_DARK,
-            textAlign: 'center',
-            marginBottom: 32,
-            lineHeight: 28,
-          }}>
-            Did you practice{' '}
-            <Text style={{ color: AGM_GREEN, fontWeight: '800' }}>
-              {virtue?.name}
-            </Text>
-            {' '}today?
-          </Text>
+  // Summary view - shows all virtue answers before finishing
+  if (viewMode === 'summary') {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: AGM_STONE }}>
+        {/* App Header */}
+        <AppHeader />
 
-          {/* Three Action Buttons */}
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            {/* Previous Button */}
-            <TouchableOpacity
-              onPress={handlePrevious}
-              disabled={currentVirtueIndex === 0}
-              style={{ flex: 0.8 }}
-            >
-              <View style={{
-                backgroundColor: currentVirtueIndex === 0 ? '#e5e7eb' : '#f3f4f6',
-                borderRadius: 14,
-                paddingVertical: 16,
-                alignItems: 'center',
-              }}>
-                <MaterialCommunityIcons
-                  name="chevron-left"
-                  size={24}
-                  color={currentVirtueIndex === 0 ? '#999' : AGM_DARK}
-                />
-              </View>
-            </TouchableOpacity>
-
-            {/* Needs Work Button */}
-            <TouchableOpacity
-              onPress={() => {
-                if (isCompleted) {
-                  handleToggleVirtue(virtue);
-                }
-                // Auto advance after selecting
-                setTimeout(() => {
-                  if (isLastVirtue) {
-                    handleFinishCheckin();
-                  } else {
-                    handleNext();
-                  }
-                }, 300);
-              }}
-              style={{ flex: 1 }}
-            >
+        <ScrollView contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 24, paddingTop: 24, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
+          {/* Summary Stats */}
+          {(() => {
+            const completedCount = virtues.filter(v => todayCheckIns[v.id]?.completed).length;
+            const percentage = Math.round((completedCount / virtues.length) * 100);
+            return (
               <View
                 style={{
-                  backgroundColor: !isCompleted ? AGM_STONE : '#f3f4f6',
-                  borderRadius: 14,
-                  paddingVertical: 16,
+                  backgroundColor: 'white',
+                  borderRadius: 16,
+                  padding: 24,
+                  marginBottom: 24,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                  elevation: 3,
                   alignItems: 'center',
-                  borderWidth: 2,
-                  borderColor: !isCompleted ? AGM_GREEN : '#e5e7eb',
                 }}
               >
-                <Text
-                  style={{
-                    fontSize: 16,
-                    fontWeight: '700',
-                    color: AGM_DARK,
-                  }}
-                >
-                  Needs Work
+                <Text style={{ fontSize: 14, color: '#666666', marginBottom: 8, fontWeight: '500' }}>
+                  Today's Progress
+                </Text>
+                <Text style={{ fontSize: 48, fontWeight: '800', color: AGM_GREEN, marginBottom: 8 }}>
+                  {percentage}%
+                </Text>
+                <Text style={{ fontSize: 14, color: '#999999', fontWeight: '500' }}>
+                  {completedCount} of {virtues.length} virtues completed
                 </Text>
               </View>
-            </TouchableOpacity>
+            );
+          })()}
 
-            {/* Yes Button */}
-            <TouchableOpacity
-              onPress={() => {
-                if (!isCompleted) {
-                  handleToggleVirtue(virtue);
-                }
-                // Auto advance after selecting
-                setTimeout(() => {
-                  if (isLastVirtue) {
-                    handleFinishCheckin();
-                  } else {
-                    handleNext();
-                  }
-                }, 300);
-              }}
-              style={{ flex: 1 }}
-            >
+          {/* Summary Cards */}
+          {virtues.map((virtue, index) => {
+            const isCompleted = todayCheckIns[virtue.id]?.completed || false;
+            return (
               <View
+                key={virtue.id}
                 style={{
-                  backgroundColor: isCompleted ? AGM_GREEN : '#f3f4f6',
-                  borderRadius: 14,
-                  paddingVertical: 16,
+                  backgroundColor: 'white',
+                  borderRadius: 16,
+                  padding: 20,
+                  marginBottom: 16,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                  elevation: 3,
+                  flexDirection: 'row',
                   alignItems: 'center',
-                  borderWidth: 2,
-                  borderColor: isCompleted ? AGM_GREEN : '#e5e7eb',
+                  borderLeftWidth: 4,
+                  borderLeftColor: isCompleted ? AGM_GREEN : '#e5e7eb',
                 }}
               >
-                <MaterialCommunityIcons
-                  name={isCompleted ? 'check-circle' : 'circle-outline'}
-                  size={28}
-                  color={isCompleted ? 'white' : '#999'}
-                  style={{ marginBottom: 4 }}
-                />
-                <Text
+                {/* Virtue Number */}
+                <View
                   style={{
-                    fontSize: 16,
-                    fontWeight: '700',
-                    color: isCompleted ? 'white' : AGM_DARK,
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    backgroundColor: isCompleted ? AGM_GREEN : '#f0f0f0',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 16,
                   }}
                 >
-                  Yes
-                </Text>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: isCompleted ? 'white' : AGM_DARK }}>
+                    {index + 1}
+                  </Text>
+                </View>
+
+                {/* Virtue Info */}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: AGM_DARK, marginBottom: 4 }}>
+                    {virtue.name}
+                  </Text>
+                  <Text style={{ fontSize: 13, color: isCompleted ? AGM_GREEN : '#999999', fontWeight: '600' }}>
+                    {isCompleted ? '✓ Yes' : 'Needs Work'}
+                  </Text>
+                </View>
+
+                {/* Status Icon */}
+                {isCompleted && (
+                  <MaterialCommunityIcons name="check-circle" size={28} color={AGM_GREEN} style={{ marginLeft: 12 }} />
+                )}
               </View>
-            </TouchableOpacity>
-          </View>
+            );
+          })}
+
+          <View style={{ height: 32 }} />
         </ScrollView>
+
+        {/* Action Buttons */}
+        <View style={{ paddingHorizontal: 24, paddingBottom: 24, flexDirection: 'row', gap: 12 }}>
+          {/* Previous Button */}
+          <TouchableOpacity
+            onPress={() => {
+              setCurrentVirtueIndex(virtues.length - 1);
+              setShowFullDescription(false);
+              setViewMode('checklist');
+            }}
+            style={{
+              flex: 1,
+              paddingVertical: 16,
+              borderRadius: 12,
+              backgroundColor: '#f0f0f0',
+              alignItems: 'center',
+              borderWidth: 1.5,
+              borderColor: '#e5e7eb',
+            }}
+          >
+            <Text style={{ fontSize: 16, fontWeight: '700', color: AGM_DARK }}>
+              Previous
+            </Text>
+          </TouchableOpacity>
+
+          {/* Finish Button */}
+          <TouchableOpacity
+            onPress={() => handleFinishCheckin()}
+            style={{
+              flex: 1,
+              paddingVertical: 16,
+              borderRadius: 12,
+              backgroundColor: AGM_GREEN,
+              alignItems: 'center',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.2,
+              shadowRadius: 4,
+              elevation: 3,
+            }}
+          >
+            <Text style={{ fontSize: 16, fontWeight: '700', color: 'white' }}>
+              Finish
+            </Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }

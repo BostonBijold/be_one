@@ -1,4 +1,5 @@
 import dataService, { Habit, Routine, HabitCompletion, DailyData } from '@/services/dataService';
+import AppHeader from '@/components/AppHeader';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
@@ -23,7 +24,7 @@ const DAYS_SHORT = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'sat
 
 export default function RoutinesScreen() {
   const insets = useSafeAreaInsets();
-  
+
   // Load data directly instead of using useData hook
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
@@ -53,6 +54,21 @@ export default function RoutinesScreen() {
   // Habits and History modal states
   const [showHabitsModal, setShowHabitsModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+
+  // Add Individual Habit modal state
+  const [showAddIndividualHabitModal, setShowAddIndividualHabitModal] = useState(false);
+  const [individualHabitName, setIndividualHabitName] = useState('');
+  const [individualHabitDescription, setIndividualHabitDescription] = useState('');
+
+  // Edit Individual Habit modal state
+  const [showEditIndividualHabitModal, setShowEditIndividualHabitModal] = useState(false);
+  const [editingIndividualHabit, setEditingIndividualHabit] = useState<Habit | null>(null);
+  const [editIndividualHabitName, setEditIndividualHabitName] = useState('');
+  const [editIndividualHabitDescription, setEditIndividualHabitDescription] = useState('');
+
+  // Delete confirmation modal state
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [habitToDelete, setHabitToDelete] = useState<Habit | null>(null);
 
   // Habits modal states
   const [habitCompletions, setHabitCompletions] = useState<{ [key: number]: HabitCompletion }>({});
@@ -237,6 +253,118 @@ export default function RoutinesScreen() {
     setShowNewHabitForm(false);
   };
 
+  // Create a new individual habit (standalone)
+  const handleAddIndividualHabit = async () => {
+    if (!individualHabitName.trim()) {
+      Alert.alert('Error', 'Please enter a habit name');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await dataService.addSingleHabit({
+        name: individualHabitName.trim(),
+        description: individualHabitDescription.trim(),
+        trackingType: 'timer',
+        duration: null,
+        expectedCompletionTime: null,
+        routineId: null,
+      });
+
+      // Reload habits list
+      const habitsData = await dataService.getHabits();
+      setHabits(habitsData);
+
+      // Reset and close modal
+      setIndividualHabitName('');
+      setIndividualHabitDescription('');
+      setShowAddIndividualHabitModal(false);
+
+      Alert.alert('Success', 'Individual habit created!');
+    } catch (err: any) {
+      console.error('Error adding individual habit:', err);
+      Alert.alert('Error', err.message || 'Failed to create habit');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Open edit modal for individual habit
+  const handleEditIndividualHabit = (habit: Habit) => {
+    setEditingIndividualHabit(habit);
+    setEditIndividualHabitName(habit.name);
+    setEditIndividualHabitDescription(habit.description || '');
+    setShowEditIndividualHabitModal(true);
+  };
+
+  // Save edited individual habit
+  const handleSaveEditIndividualHabit = async () => {
+    if (!editIndividualHabitName.trim()) {
+      Alert.alert('Error', 'Please enter a habit name');
+      return;
+    }
+
+    if (!editingIndividualHabit) return;
+
+    try {
+      setSaving(true);
+      // Update the habit using the dataService
+      await dataService.updateHabit(editingIndividualHabit.id, {
+        name: editIndividualHabitName.trim(),
+        description: editIndividualHabitDescription.trim(),
+      });
+
+      // Reload habits list
+      const habitsData = await dataService.getHabits();
+      setHabits(habitsData);
+
+      // Reset and close modal
+      setEditingIndividualHabit(null);
+      setEditIndividualHabitName('');
+      setEditIndividualHabitDescription('');
+      setShowEditIndividualHabitModal(false);
+
+      Alert.alert('Success', 'Individual habit updated!');
+    } catch (err: any) {
+      console.error('Error updating individual habit:', err);
+      Alert.alert('Error', err.message || 'Failed to update habit');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Delete individual habit
+  const handleDeleteIndividualHabit = (habit: Habit) => {
+    console.log('Delete button tapped, habit:', habit);
+    setHabitToDelete(habit);
+    setShowDeleteConfirmation(true);
+  };
+
+  // Confirm and execute delete
+  const handleConfirmDelete = async () => {
+    if (!habitToDelete) return;
+
+    try {
+      console.log('Confirming delete for habit ID:', habitToDelete.id);
+      setSaving(true);
+      await dataService.deleteHabit(habitToDelete.id);
+
+      // Reload habits list
+      const habitsData = await dataService.getHabits();
+      setHabits(habitsData);
+
+      setShowDeleteConfirmation(false);
+      setHabitToDelete(null);
+
+      Alert.alert('Success', 'Individual habit deleted!');
+    } catch (err: any) {
+      console.error('Error deleting individual habit:', err);
+      Alert.alert('Error', err.message || 'Failed to delete habit');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Create a new habit and add it to selected habits
   const handleAddNewHabit = async () => {
     if (!newHabitName.trim()) {
@@ -383,6 +511,15 @@ export default function RoutinesScreen() {
     return index >= 0 ? DAYS_OF_WEEK[index] : dayShort;
   };
 
+
+  // Format milliseconds to MM:SS format
+  const formatDuration = (milliseconds: number): string => {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: AGM_STONE }}>
@@ -415,13 +552,16 @@ export default function RoutinesScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: AGM_STONE }}>
+      {/* App Header */}
+      <AppHeader />
+
       <ScrollView contentInsetAdjustmentBehavior="automatic" showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={{ backgroundColor: AGM_DARK, paddingHorizontal: 24, paddingVertical: 24, paddingTop: insets.top + 16 }}>
+        {/* Routines Header with Add Button */}
+        <View style={{ paddingHorizontal: 24, paddingVertical: 24, paddingTop: 16 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <View>
-              <Text style={{ color: 'white', fontSize: 28, fontWeight: 'bold', marginBottom: 4 }}>Routines</Text>
-              <Text style={{ color: '#ccc', fontSize: 14 }}>{routines.length} routines</Text>
+              <Text style={{ color: AGM_DARK, fontSize: 28, fontWeight: 'bold', marginBottom: 4 }}>Routines</Text>
+              <Text style={{ color: '#999999', fontSize: 14 }}>{routines.length} routines</Text>
             </View>
             <TouchableOpacity
               onPress={() => {
@@ -436,31 +576,33 @@ export default function RoutinesScreen() {
         </View>
 
         {/* Habits and History Buttons */}
-        <View style={{ paddingHorizontal: 16, paddingVertical: 16, flexDirection: 'row' }}>
-          <TouchableOpacity
-            onPress={async () => {
-              setShowHabitsModal(true);
-              await loadHabitsModal();
-            }}
-            style={{ flex: 1, backgroundColor: AGM_GREEN, borderRadius: 8, paddingVertical: 12, alignItems: 'center', marginRight: 8 }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <MaterialCommunityIcons name="checkbox-marked-circle" size={20} color="white" style={{ marginRight: 6 }} />
-              <Text style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>Habits</Text>
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={async () => {
-              setShowHistoryModal(true);
-              await loadHistoryData(new Date());
-            }}
-            style={{ flex: 1, backgroundColor: AGM_GREEN, borderRadius: 8, paddingVertical: 12, alignItems: 'center' }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-              <MaterialCommunityIcons name="history" size={20} color="white" style={{ marginRight: 6 }} />
-              <Text style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>History</Text>
-            </View>
-          </TouchableOpacity>
+        <View style={{ paddingHorizontal: 16, paddingVertical: 16 }}>
+          <View style={{ flexDirection: 'row', marginBottom: 12 }}>
+            <TouchableOpacity
+              onPress={async () => {
+                setShowHabitsModal(true);
+                await loadHabitsModal();
+              }}
+              style={{ flex: 1, backgroundColor: AGM_GREEN, borderRadius: 8, paddingVertical: 12, alignItems: 'center', marginRight: 8 }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                <MaterialCommunityIcons name="checkbox-marked-circle" size={20} color="white" style={{ marginRight: 6 }} />
+                <Text style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>Habits</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={async () => {
+                setShowHistoryModal(true);
+                await loadHistoryData(new Date());
+              }}
+              style={{ flex: 1, backgroundColor: AGM_GREEN, borderRadius: 8, paddingVertical: 12, alignItems: 'center' }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                <MaterialCommunityIcons name="history" size={20} color="white" style={{ marginRight: 6 }} />
+                <Text style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>History</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Routines List */}
@@ -486,7 +628,16 @@ export default function RoutinesScreen() {
                     style={{ backgroundColor: '#ffffff', borderRadius: 12, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 18, fontWeight: '600', color: AGM_DARK, marginBottom: 4 }}>{routine.name}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                        <Text style={{ fontSize: 18, fontWeight: '600', color: AGM_DARK }}>
+                          {routine.name}
+                        </Text>
+                        {routine.completionCount && routine.completionCount > 0 && routine.totalDurationSum && (
+                          <Text style={{ fontSize: 13, color: '#999999', marginLeft: 8 }}>
+                            (avg. {formatDuration(routine.totalDurationSum / routine.completionCount)})
+                          </Text>
+                        )}
+                      </View>
                       <Text style={{ fontSize: 13, color: '#666666' }}>
                         {routine.days.map(d => getDayLabel(d)).join(', ')}
                       </Text>
@@ -539,6 +690,75 @@ export default function RoutinesScreen() {
               );
             })
           )}
+
+          {/* Individual Habits Section */}
+          <View style={{ marginTop: 32, paddingBottom: 24 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: AGM_DARK }}>
+                Individual Habits
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowAddIndividualHabitModal(true)}
+                style={{ backgroundColor: AGM_GREEN, borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12 }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                  <MaterialCommunityIcons name="plus-circle" size={16} color="white" style={{ marginRight: 4 }} />
+                  <Text style={{ color: 'white', fontWeight: '600', fontSize: 12 }}>Add</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {habits.filter(h => !h.routineId).length > 0 ? (
+              <>
+                {habits.filter(h => !h.routineId).map((habit) => (
+                <View
+                  key={habit.id}
+                  style={{
+                    backgroundColor: '#ffffff',
+                    borderRadius: 12,
+                    padding: 16,
+                    marginBottom: 12,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 4,
+                    elevation: 3,
+                  }}
+                >
+                  <View style={{ marginBottom: 12 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '600', color: AGM_DARK, marginBottom: 4 }}>
+                      {habit.name}
+                    </Text>
+                    {habit.description && (
+                      <Text style={{ fontSize: 13, color: '#666666' }}>
+                        {habit.description}
+                      </Text>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => handleEditIndividualHabit(habit)}
+                    style={{
+                      backgroundColor: AGM_GREEN,
+                      borderRadius: 8,
+                      paddingVertical: 10,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                      <MaterialCommunityIcons name="pencil" size={16} color="white" style={{ marginRight: 6 }} />
+                      <Text style={{ color: 'white', fontWeight: '600', fontSize: 13 }}>Edit</Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </>
+            ) : (
+              <Text style={{ fontSize: 13, color: '#999999', fontStyle: 'italic' }}>
+                No individual habits yet. Tap "Add" to create one.
+              </Text>
+            )}
+          </View>
         </View>
       </ScrollView>
 
@@ -1043,6 +1263,350 @@ export default function RoutinesScreen() {
             </ScrollView>
           )}
         </SafeAreaView>
+      </Modal>
+
+      {/* Add Individual Habit Modal */}
+      <Modal
+        visible={showAddIndividualHabitModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => {
+          setShowAddIndividualHabitModal(false);
+          setIndividualHabitName('');
+          setIndividualHabitDescription('');
+        }}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View
+            style={{
+              backgroundColor: 'white',
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              paddingHorizontal: 24,
+              paddingBottom: 32,
+              paddingTop: 24,
+            }}
+          >
+            {/* Header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: AGM_DARK }}>
+                Add Individual Habit
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowAddIndividualHabitModal(false);
+                  setIndividualHabitName('');
+                  setIndividualHabitDescription('');
+                }}
+              >
+                <MaterialCommunityIcons name="close" size={24} color={AGM_DARK} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Habit Name Input */}
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: AGM_DARK, marginBottom: 8 }}>
+                Habit Name
+              </Text>
+              <TextInput
+                style={{
+                  borderWidth: 1,
+                  borderColor: '#e5e7eb',
+                  borderRadius: 8,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  color: AGM_DARK,
+                  fontSize: 14,
+                }}
+                placeholder="e.g., Drink Water, Exercise, Meditate"
+                placeholderTextColor="#999999"
+                value={individualHabitName}
+                onChangeText={setIndividualHabitName}
+              />
+            </View>
+
+            {/* Habit Description Input */}
+            <View style={{ marginBottom: 24 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: AGM_DARK, marginBottom: 8 }}>
+                Description (Optional)
+              </Text>
+              <TextInput
+                style={{
+                  borderWidth: 1,
+                  borderColor: '#e5e7eb',
+                  borderRadius: 8,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  color: AGM_DARK,
+                  fontSize: 14,
+                  minHeight: 80,
+                  textAlignVertical: 'top',
+                }}
+                placeholder="Add notes about this habit..."
+                placeholderTextColor="#999999"
+                value={individualHabitDescription}
+                onChangeText={setIndividualHabitDescription}
+                multiline={true}
+                numberOfLines={4}
+              />
+            </View>
+
+            {/* Action Buttons */}
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowAddIndividualHabitModal(false);
+                  setIndividualHabitName('');
+                  setIndividualHabitDescription('');
+                }}
+                style={{
+                  flex: 1,
+                  borderWidth: 1,
+                  borderColor: '#e5e7eb',
+                  borderRadius: 8,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ color: AGM_DARK, fontWeight: '600', fontSize: 14 }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleAddIndividualHabit}
+                disabled={saving}
+                style={{
+                  flex: 1,
+                  backgroundColor: AGM_GREEN,
+                  borderRadius: 8,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                  opacity: saving ? 0.6 : 1,
+                }}
+              >
+                <Text style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>
+                  {saving ? 'Creating...' : 'Create Habit'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Individual Habit Modal */}
+      <Modal
+        visible={showEditIndividualHabitModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => {
+          setShowEditIndividualHabitModal(false);
+          setEditingIndividualHabit(null);
+          setEditIndividualHabitName('');
+          setEditIndividualHabitDescription('');
+        }}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View
+            style={{
+              backgroundColor: 'white',
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              paddingHorizontal: 24,
+              paddingBottom: 32,
+              paddingTop: 24,
+            }}
+          >
+            {/* Header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: AGM_DARK }}>
+                Edit Individual Habit
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowEditIndividualHabitModal(false);
+                  setEditingIndividualHabit(null);
+                  setEditIndividualHabitName('');
+                  setEditIndividualHabitDescription('');
+                }}
+              >
+                <MaterialCommunityIcons name="close" size={24} color={AGM_DARK} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Habit Name Input */}
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: AGM_DARK, marginBottom: 8 }}>
+                Habit Name
+              </Text>
+              <TextInput
+                style={{
+                  borderWidth: 1,
+                  borderColor: '#e5e7eb',
+                  borderRadius: 8,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  color: AGM_DARK,
+                  fontSize: 14,
+                }}
+                placeholder="Habit name"
+                placeholderTextColor="#999999"
+                value={editIndividualHabitName}
+                onChangeText={setEditIndividualHabitName}
+              />
+            </View>
+
+            {/* Habit Description Input */}
+            <View style={{ marginBottom: 24 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: AGM_DARK, marginBottom: 8 }}>
+                Description (Optional)
+              </Text>
+              <TextInput
+                style={{
+                  borderWidth: 1,
+                  borderColor: '#e5e7eb',
+                  borderRadius: 8,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  color: AGM_DARK,
+                  fontSize: 14,
+                  minHeight: 80,
+                  textAlignVertical: 'top',
+                }}
+                placeholder="Add notes about this habit..."
+                placeholderTextColor="#999999"
+                value={editIndividualHabitDescription}
+                onChangeText={setEditIndividualHabitDescription}
+                multiline={true}
+                numberOfLines={4}
+              />
+            </View>
+
+            {/* Delete Button */}
+            <TouchableOpacity
+              onPress={() => {
+                if (editingIndividualHabit) {
+                  setShowEditIndividualHabitModal(false);
+                  handleDeleteIndividualHabit(editingIndividualHabit);
+                }
+              }}
+              style={{
+                backgroundColor: '#ff6b6b',
+                borderRadius: 8,
+                paddingVertical: 12,
+                alignItems: 'center',
+                marginBottom: 16,
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                <MaterialCommunityIcons name="trash-can" size={18} color="white" style={{ marginRight: 6 }} />
+                <Text style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>Delete Habit</Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Action Buttons */}
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowEditIndividualHabitModal(false);
+                  setEditingIndividualHabit(null);
+                  setEditIndividualHabitName('');
+                  setEditIndividualHabitDescription('');
+                }}
+                style={{
+                  flex: 1,
+                  borderWidth: 1,
+                  borderColor: '#e5e7eb',
+                  borderRadius: 8,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ color: AGM_DARK, fontWeight: '600', fontSize: 14 }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleSaveEditIndividualHabit}
+                disabled={saving}
+                style={{
+                  flex: 1,
+                  backgroundColor: AGM_GREEN,
+                  borderRadius: 8,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                  opacity: saving ? 0.6 : 1,
+                }}
+              >
+                <Text style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        visible={showDeleteConfirmation}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => {
+          setShowDeleteConfirmation(false);
+          setHabitToDelete(null);
+        }}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 }}>
+          <View
+            style={{
+              backgroundColor: 'white',
+              borderRadius: 16,
+              padding: 24,
+              width: '100%',
+              maxWidth: 400,
+            }}
+          >
+            <Text style={{ fontSize: 18, fontWeight: 'bold', color: AGM_DARK, marginBottom: 12 }}>
+              Delete Habit?
+            </Text>
+            <Text style={{ fontSize: 14, color: '#666666', marginBottom: 24 }}>
+              Are you sure you want to delete "{habitToDelete?.name}"? This action cannot be undone.
+            </Text>
+
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowDeleteConfirmation(false);
+                  setHabitToDelete(null);
+                }}
+                disabled={saving}
+                style={{
+                  flex: 1,
+                  borderWidth: 1,
+                  borderColor: '#e5e7eb',
+                  borderRadius: 8,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                  opacity: saving ? 0.6 : 1,
+                }}
+              >
+                <Text style={{ color: AGM_DARK, fontWeight: '600', fontSize: 14 }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleConfirmDelete}
+                disabled={saving}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#ff6b6b',
+                  borderRadius: 8,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                  opacity: saving ? 0.6 : 1,
+                }}
+              >
+                <Text style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>
+                  {saving ? 'Deleting...' : 'Delete'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );

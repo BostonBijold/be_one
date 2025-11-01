@@ -256,6 +256,15 @@ export default function RoutineDetailScreen() {
           // Save routine completion to Firebase
           await dataService.updateDailyData(todayString, updatedDailyData);
           setDailyData(updatedDailyData);
+
+          // Update routine aggregate stats for average calculation
+          const newTotalSum = (routine.totalDurationSum || 0) + routineDurationMs;
+          const newCount = (routine.completionCount || 0) + 1;
+
+          await dataService.updateRoutine(routine.id, {
+            totalDurationSum: newTotalSum,
+            completionCount: newCount,
+          });
         }
 
         console.log('Routine complete! Showing alert and returning to home');
@@ -323,7 +332,7 @@ export default function RoutineDetailScreen() {
       updatedDailyData.routineCompletions[routine.id] = {
         completed: true,
         completedAt: new Date(routineEndTime).toISOString(),
-        duration: routineDurationMs,
+        totalDuration: routineDurationMs,
         startTime: new Date(routineStartTime).toISOString(),
         endTime: new Date(routineEndTime).toISOString(),
         notes: '',
@@ -332,6 +341,18 @@ export default function RoutineDetailScreen() {
       // Save to Firebase
       await dataService.updateDailyData(todayString, updatedDailyData);
       setDailyData(updatedDailyData);
+
+      // Update routine aggregate stats for average calculation
+      if (routine) {
+        const currentRoutine = routine;
+        const newTotalSum = (currentRoutine.totalDurationSum || 0) + routineDurationMs;
+        const newCount = (currentRoutine.completionCount || 0) + 1;
+
+        await dataService.updateRoutine(routine.id, {
+          totalDurationSum: newTotalSum,
+          completionCount: newCount,
+        });
+      }
 
       // Navigate back to dashboard
       router.back();

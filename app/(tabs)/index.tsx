@@ -30,6 +30,7 @@ export default function DashboardScreen() {
   const [error, setError] = useState<string | null>(null);
   const [expandedRoutines, setExpandedRoutines] = useState<number[]>([]);
   const [weekVirtueObject, setWeekVirtueObject] = useState<any>(null);
+  const [habitStreaks, setHabitStreaks] = useState<Record<number, number>>({});
 
   const todayString = dataService.getTodayString();
 
@@ -45,6 +46,67 @@ export default function DashboardScreen() {
     } catch {
       return '';
     }
+  };
+
+  // Format milliseconds to MM:SS format
+  const formatDuration = (milliseconds: number): string => {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  // Calculate habit streak by checking consecutive days of completion
+  const calculateHabitStreaks = async (habitsData: Habit[], todayDailyData: DailyData | null) => {
+    const streaks: Record<number, number> = {};
+
+    // Helper function to format a date as YYYY-MM-DD
+    const formatDateString = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    for (const habit of habitsData) {
+      let streak = 0;
+      let currentDate = new Date();
+
+      // Check up to 365 days back
+      for (let i = 0; i < 365; i++) {
+        const dateString = formatDateString(currentDate);
+        let dailyDataForDate: DailyData | null = null;
+
+        if (i === 0) {
+          // Use the already loaded today's data
+          dailyDataForDate = todayDailyData;
+        } else {
+          // Fetch daily data for previous dates
+          try {
+            dailyDataForDate = await dataService.getTodayData(dateString);
+          } catch {
+            dailyDataForDate = null;
+          }
+        }
+
+        // Check if habit was completed on this date
+        const isCompleted = dailyDataForDate?.habitCompletions?.[habit.id]?.completed || false;
+
+        if (isCompleted) {
+          streak++;
+        } else {
+          // Streak broken, stop counting
+          break;
+        }
+
+        // Move to previous day
+        currentDate.setDate(currentDate.getDate() - 1);
+      }
+
+      streaks[habit.id] = streak;
+    }
+
+    setHabitStreaks(streaks);
   };
 
   // Load all data directly
@@ -75,6 +137,9 @@ export default function DashboardScreen() {
       setDailyData(dailyDataResult);
       setWeeklyVirtue(weeklyVirtueData?.name || null);
       setWeekVirtueObject(weeklyVirtueData);
+
+      // Calculate streaks for all habits in the background
+      calculateHabitStreaks(habitsData, dailyDataResult);
 
       // Auto-load daily challenge if weekly virtue exists
       // Always load/update challenge to match the current weekly virtue
@@ -207,6 +272,35 @@ export default function DashboardScreen() {
     const percentage = totalHabits > 0 ? Math.round((completedHabits / totalHabits) * 100) : 0;
 
     return { completed: completedHabits, total: totalHabits, percentage };
+  };
+
+  // Handle toggling individual habit completion
+  const handleToggleHabitCompletion = async (habitId: number) => {
+    if (!dailyData) return;
+
+    try {
+      const currentCompletion = dailyData.habitCompletions?.[habitId];
+      const isCurrentlyCompleted = currentCompletion?.completed || false;
+
+      const updatedDailyData = { ...dailyData };
+      updatedDailyData.habitCompletions = { ...dailyData.habitCompletions };
+
+      if (isCurrentlyCompleted) {
+        // Remove the completion
+        delete updatedDailyData.habitCompletions[habitId];
+      } else {
+        // Mark as completed
+        updatedDailyData.habitCompletions[habitId] = {
+          completed: true,
+          completedAt: new Date().toISOString(),
+        };
+      }
+
+      await dataService.updateDailyData(todayString, updatedDailyData);
+      setDailyData(updatedDailyData);
+    } catch (err: any) {
+      console.error('Error toggling habit completion:', err);
+    }
   };
 
   const progress = calculateProgress();
@@ -505,9 +599,16 @@ export default function DashboardScreen() {
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 16, fontWeight: '600', color: AGM_DARK, marginBottom: 4 }}>
-                          {routine.name}
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                          <Text style={{ fontSize: 16, fontWeight: '600', color: AGM_DARK }}>
+                            {routine.name}
+                          </Text>
+                          {routine.completionCount && routine.completionCount > 0 && routine.totalDurationSum && (
+                            <Text style={{ fontSize: 12, color: '#999999', marginLeft: 8 }}>
+                              (avg. {formatDuration(routine.totalDurationSum / routine.completionCount)})
+                            </Text>
+                          )}
+                        </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                           <Text style={{ fontSize: 13, color: '#666666', marginRight: 12 }}>
                             {routineHabits.length} {routineHabits.length === 1 ? 'habit' : 'habits'}
@@ -621,8 +722,9 @@ export default function DashboardScreen() {
               const isCompleted = completion?.completed || false;
 
               return (
-                <View
+                <TouchableOpacity
                   key={habit.id}
+                  onPress={() => handleToggleHabitCompletion(habit.id)}
                   style={{
                     backgroundColor: 'white',
                     borderRadius: 12,
@@ -637,22 +739,29 @@ export default function DashboardScreen() {
                     borderLeftColor: isCompleted ? AGM_GREEN : '#e5e7eb',
                   }}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 15, fontWeight: '600', color: AGM_DARK, marginBottom: 2 }}>
                         {habit.name}
                       </Text>
                       {habit.description && (
-                        <Text style={{ fontSize: 13, color: '#666666' }}>{habit.description}</Text>
+                        <Text style={{ fontSize: 13, color: '#666666', marginBottom: 8 }}>{habit.description}</Text>
+                      )}
+                      {habitStreaks[habit.id] !== undefined && (
+                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#ff6b6b' }}>
+                          {habitStreaks[habit.id]} {habitStreaks[habit.id] === 1 ? 'day' : 'days'}
+                        </Text>
                       )}
                     </View>
-                    <MaterialCommunityIcons
-                      name={isCompleted ? 'check-circle' : 'circle-outline'}
-                      size={24}
-                      color={isCompleted ? AGM_GREEN : '#d1d5db'}
-                    />
+                    <View style={{ alignItems: 'center' }}>
+                      <MaterialCommunityIcons
+                        name={isCompleted ? 'check-circle' : 'circle-outline'}
+                        size={24}
+                        color={isCompleted ? AGM_GREEN : '#d1d5db'}
+                      />
+                    </View>
                   </View>
-                </View>
+                </TouchableOpacity>
               );
             })}
 

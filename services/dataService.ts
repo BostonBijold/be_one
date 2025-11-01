@@ -36,6 +36,8 @@ export interface Routine {
   days: string[];
   habits: number[];
   order: number;
+  totalDurationSum?: number; // Sum of all completion durations in milliseconds
+  completionCount?: number; // Number of completed instances
 }
 
 export interface Habit {
@@ -397,7 +399,9 @@ class DataService {
 
   async getHabits(): Promise<Habit[]> {
     const userData = await this.getCurrentUserData();
-    return userData?.data?.habits || [];
+    const habits = userData?.data?.habits || [];
+    // Filter out habits with invalid (NaN) IDs
+    return habits.filter(h => !isNaN(h.id));
   }
 
   async getGoals(): Promise<Goal[]> {
@@ -1345,7 +1349,9 @@ class DataService {
     const userData = await this.getCurrentUserData();
     if (!userData) throw new Error('No user data found');
 
-    const newId = Math.max(...userData.data.habits.map(h => h.id), 0) + 1;
+    // Filter out any habits with invalid (NaN) IDs and calculate next ID
+    const validIds = userData.data.habits.map(h => h.id).filter(id => !isNaN(id));
+    const newId = Math.max(...validIds, 0) + 1;
 
     const newHabit: Habit = {
       id: newId,

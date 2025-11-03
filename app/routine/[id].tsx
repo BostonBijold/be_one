@@ -712,6 +712,36 @@ export default function RoutineDetailScreen() {
                     of {formatTime(EXPECTED_DURATION)}
                   </Text>
                 </View>
+
+                {/* Excuse Button - Top Right */}
+                {currentHabit?.excusable && (
+                  <TouchableOpacity
+                    onPress={() => setShowExcuseModal(true)}
+                    style={{
+                      position: 'absolute',
+                      top: 16,
+                      right: 16,
+                      width: 50,
+                      height: 50,
+                      borderRadius: 25,
+                      backgroundColor: '#ffe0e0',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      zIndex: 20,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 4,
+                      elevation: 3,
+                    }}
+                  >
+                    <MaterialCommunityIcons
+                      name="clock-remove"
+                      size={24}
+                      color="#ff6b6b"
+                    />
+                  </TouchableOpacity>
+                )}
               </View>
 
               {/* Habit Name */}
@@ -795,28 +825,6 @@ export default function RoutineDetailScreen() {
                     color={currentHabitIndex === habits.length - 1 ? '#999999' : AGM_DARK}
                   />
                 </TouchableOpacity>
-
-                {/* Excuse Button (only if habit is excusable) */}
-                {currentHabit?.excusable && (
-                  <TouchableOpacity
-                    onPress={() => setShowExcuseModal(true)}
-                    style={{
-                      width: 50,
-                      height: 50,
-                      borderRadius: 25,
-                      backgroundColor: '#f0f0f0',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      marginLeft: 12,
-                    }}
-                  >
-                    <MaterialCommunityIcons
-                      name="clock-remove"
-                      size={24}
-                      color="#ff6b6b"
-                    />
-                  </TouchableOpacity>
-                )}
               </View>
             </View>
           </View>

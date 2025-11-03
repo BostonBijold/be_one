@@ -8,6 +8,7 @@ import {
   Alert,
   Modal,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Svg, { Circle, Path } from 'react-native-svg';
 import dataService, { Habit, DailyData } from '@/services/dataService';
@@ -31,6 +32,7 @@ export default function TimerModal({
   onClose,
   onDailyDataUpdate,
 }: TimerModalProps) {
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
 
   // Timer state
@@ -311,9 +313,9 @@ export default function TimerModal({
             backgroundColor: 'white',
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
-            paddingHorizontal: 32,
+            paddingHorizontal: Math.max(32, insets.left + 16, insets.right + 16),
             paddingTop: 32,
-            paddingBottom: 40,
+            paddingBottom: Math.max(40, insets.bottom + 16),
             maxHeight: '90%',
             alignItems: 'center',
             position: 'relative',

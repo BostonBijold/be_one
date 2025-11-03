@@ -106,7 +106,7 @@ export default function TabLayout() {
           width: 84,
           height: 84,
           borderRadius: 42,
-          backgroundColor: 'rgba(255, 255, 255, 0.6)',
+          backgroundColor: '#ffffff',
           justifyContent: 'center',
           alignItems: 'center',
           zIndex: 10,

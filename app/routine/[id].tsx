@@ -129,45 +129,6 @@ export default function RoutineDetailScreen() {
     };
   }, []);
 
-  // Helper function to format seconds to MM:SS
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // Get habits for a routine
-  const getRoutineHabits = (routineHabitIds: number[]): Habit[] => {
-    return habits.filter(h => routineHabitIds.includes(h.id));
-  };
-
-  // Get routine composition data for stacked bar
-  const getRoutineCompositionData = (routine: Routine, routineCompletion: any) => {
-    if (!routineCompletion || !routineCompletion.habitTimes) {
-      return { composition: [], totalSeconds: 0 };
-    }
-
-    const routineHabits = getRoutineHabits(routine.habits);
-    const colors = ['#4b5320', '#8b7355', '#5a8a6b', '#a89b6f', '#6b8f9a', '#9b7b8f', '#8a7b6b'];
-
-    const composition = routineHabits.map((habit, index) => {
-      const habitTiming = routineCompletion.habitTimes[habit.id];
-      const durationSeconds = habitTiming
-        ? Math.round((habitTiming.duration || 0) / 1000)
-        : 0;
-
-      return {
-        habit,
-        durationSeconds,
-        color: colors[index % colors.length],
-      };
-    });
-
-    const totalSeconds = composition.reduce((sum, c) => sum + c.durationSeconds, 0);
-
-    return { composition, totalSeconds };
-  };
-
   if (loading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: AGM_STONE }}>
@@ -209,6 +170,38 @@ export default function RoutineDetailScreen() {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Get habits for a routine
+  const getRoutineHabits = (routineHabitIds: number[]): Habit[] => {
+    return habits.filter(h => routineHabitIds.includes(h.id));
+  };
+
+  // Get routine composition data for stacked bar
+  const getRoutineCompositionData = (routine: Routine, routineCompletion: any) => {
+    if (!routineCompletion || !routineCompletion.habitTimes) {
+      return { composition: [], totalSeconds: 0 };
+    }
+
+    const routineHabits = getRoutineHabits(routine.habits);
+    const colors = ['#4b5320', '#8b7355', '#5a8a6b', '#a89b6f', '#6b8f9a', '#9b7b8f', '#8a7b6b'];
+
+    const composition = routineHabits.map((habit, index) => {
+      const habitTiming = routineCompletion.habitTimes[habit.id];
+      const durationSeconds = habitTiming
+        ? Math.round((habitTiming.duration || 0) / 1000)
+        : 0;
+
+      return {
+        habit,
+        durationSeconds,
+        color: colors[index % colors.length],
+      };
+    });
+
+    const totalSeconds = composition.reduce((sum, c) => sum + c.durationSeconds, 0);
+
+    return { composition, totalSeconds };
   };
 
   // Calculate progress (0-1, cycles every 10 minutes)

@@ -9,6 +9,7 @@ import {
   Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Svg, { Circle, Path } from 'react-native-svg';
 import dataService, { Habit, DailyData } from '@/services/dataService';
@@ -165,6 +166,9 @@ export default function TimerModal({
     if (!habit || !habitStartTime) return;
 
     try {
+      // Haptic feedback - light impact on button press
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
       setLoading(true);
       const endTimeMs = Date.now();
       const durationMs = endTimeMs - habitStartTime;
@@ -202,9 +206,14 @@ export default function TimerModal({
         completionCount: newCount,
       });
 
+      // Haptic feedback - success pattern on completion
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
       setLoading(false);
     } catch {
       setLoading(false);
+      // Haptic feedback - error pattern
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', 'Failed to save habit completion');
     }
   };
@@ -261,6 +270,9 @@ export default function TimerModal({
     }
 
     try {
+      // Haptic feedback - light impact on button press
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
       setLoading(true);
       // Initialize dailyData if it doesn't exist
       const updatedDailyData = dailyData || {
@@ -294,9 +306,14 @@ export default function TimerModal({
       setSelectedExcuseReason('');
       setLoading(false);
 
+      // Haptic feedback - success pattern
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
       Alert.alert('Done', `${habit.name} marked as excused`);
     } catch {
       setLoading(false);
+      // Haptic feedback - error pattern
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Error', 'Failed to excuse habit');
     }
   };

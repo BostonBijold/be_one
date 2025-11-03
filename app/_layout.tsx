@@ -8,6 +8,7 @@ import authService, { UserData } from '@/services/authService';
 import { TimerModalProvider } from '@/context/TimerModalContext';
 import TimerModal from '@/components/TimerModal';
 import { useTimerModal } from '@/context/TimerModalContext';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -72,8 +73,10 @@ function RootLayoutContent() {
 
 export default function RootLayout() {
   return (
-    <TimerModalProvider>
-      <RootLayoutContent />
-    </TimerModalProvider>
+    <ErrorBoundary>
+      <TimerModalProvider>
+        <RootLayoutContent />
+      </TimerModalProvider>
+    </ErrorBoundary>
   );
 }

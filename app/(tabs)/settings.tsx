@@ -27,7 +27,8 @@ export default function SettingsScreen() {
   React.useEffect(() => {
     console.log('Settings - User object:', user);
     console.log('Settings - Is Admin:', user?.isAdmin);
-  }, [user]);
+    console.log('Settings - Loading:', loading);
+  }, [user, loading]);
 
   const handleSignOut = () => {
     Alert.alert(

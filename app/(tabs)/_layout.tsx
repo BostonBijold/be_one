@@ -3,7 +3,6 @@ import React from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { TouchableOpacity, View } from 'react-native';
-import Svg, { Path, Defs, LinearGradient, Stop } from 'react-native-svg';
 
 export default function TabLayout() {
   const router = useRouter();
@@ -26,12 +25,12 @@ export default function TabLayout() {
           headerShown: false,
           tabBarStyle: {
             backgroundColor: AGM_STONE,
-            borderTopColor: 'transparent',
-            borderTopWidth: 0,
-            height: 90,
-            paddingBottom: 8,
-            paddingTop: 16,
-            paddingHorizontal: 16,
+            borderTopColor: '#e0ddd0',
+            borderTopWidth: 1,
+            height: 80,
+            paddingBottom: 12,
+            paddingTop: 8,
+            paddingRight: 20,
           },
           tabBarLabelStyle: {
             fontSize: 12,
@@ -95,29 +94,17 @@ export default function TabLayout() {
         />
       </Tabs>
 
-      {/* Curved Tab Border with integrated FAB */}
-      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 90, zIndex: 1 }}>
-        <Svg width="100%" height="100%" viewBox="0 0 375 90" preserveAspectRatio="none">
-          <Path
-            d="M 0 20 L 60 20 Q 75 20 75 35 Q 75 50 87.5 50 Q 100 50 112.5 50 Q 125 50 125 35 Q 125 20 140 20 L 375 20 L 375 90 L 0 90 Z"
-            fill={AGM_STONE}
-            stroke="#e0ddd0"
-            strokeWidth="1"
-          />
-        </Svg>
-      </View>
-
-      {/* Floating Action Button (FAB) - Integrated with border */}
+      {/* Floating Action Button (FAB) */}
       <TouchableOpacity
         onPress={handleFABPress}
         style={{
           position: 'absolute',
-          bottom: 20,
+          bottom: 40,
           left: '50%',
-          marginLeft: -40,
-          width: 80,
-          height: 80,
-          borderRadius: 40,
+          marginLeft: -35,
+          width: 70,
+          height: 70,
+          borderRadius: 35,
           backgroundColor: AGM_GREEN,
           justifyContent: 'center',
           alignItems: 'center',
@@ -126,10 +113,10 @@ export default function TabLayout() {
           shadowOpacity: 0.3,
           shadowRadius: 12,
           elevation: 8,
-          zIndex: 50,
+          zIndex: 100,
         }}
       >
-        <MaterialCommunityIcons name="play" size={44} color="white" />
+        <MaterialCommunityIcons name="play" size={40} color="white" />
       </TouchableOpacity>
     </View>
   );

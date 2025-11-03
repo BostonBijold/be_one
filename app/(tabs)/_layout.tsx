@@ -59,6 +59,9 @@ export default function TabLayout() {
             tabBarIcon: ({ color }) => (
               <MaterialCommunityIcons name="repeat" size={26} color={color} />
             ),
+            tabBarItemStyle: {
+              marginRight: 24,
+            },
           }}
         />
         {/* Virtues tab hidden - accessible via action button */}
@@ -79,6 +82,9 @@ export default function TabLayout() {
             tabBarIcon: ({ color }) => (
               <MaterialCommunityIcons name="history" size={26} color={color} />
             ),
+            tabBarItemStyle: {
+              marginLeft: 24,
+            },
           }}
         />
         {/* Habits tab hidden - accessible from Routines tab */}

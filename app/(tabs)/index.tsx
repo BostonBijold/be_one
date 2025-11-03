@@ -274,6 +274,45 @@ export default function DashboardScreen() {
 
   const progress = calculateProgress();
 
+  // Helper function to format seconds to MM:SS
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Get habits for a routine
+  const getRoutineHabits = (routineHabitIds: number[]): Habit[] => {
+    return habits.filter(h => routineHabitIds.includes(h.id));
+  };
+
+  // Get routine composition data for stacked bar
+  const getRoutineCompositionData = (routine: Routine, routineCompletion: any) => {
+    if (!routineCompletion || !routineCompletion.habitTimes) {
+      return { composition: [], totalSeconds: 0 };
+    }
+
+    const routineHabits = getRoutineHabits(routine.habits);
+    const colors = ['#4b5320', '#8b7355', '#5a8a6b', '#a89b6f', '#6b8f9a', '#9b7b8f', '#8a7b6b'];
+
+    const composition = routineHabits.map((habit, index) => {
+      const habitTiming = routineCompletion.habitTimes[habit.id];
+      const durationSeconds = habitTiming
+        ? Math.round((habitTiming.duration || 0) / 1000)
+        : 0;
+
+      return {
+        habit,
+        durationSeconds,
+        color: colors[index % colors.length],
+      };
+    });
+
+    const totalSeconds = composition.reduce((sum, c) => sum + c.durationSeconds, 0);
+
+    return { composition, totalSeconds };
+  };
+
   // Get standalone habits (not in routines)
   const standaloneHabits = habits.filter((h) => !h.routineId);
 
@@ -582,64 +621,147 @@ export default function DashboardScreen() {
                     </View>
                   </TouchableOpacity>
 
-                  {/* Expanded Habits List */}
+                  {/* Expanded Content */}
                   {isExpanded && (
                     <View style={{ borderTopWidth: 1, borderTopColor: '#e5e7eb', paddingHorizontal: 16, paddingVertical: 12 }}>
-                      {routineHabits.map((habit, index) => {
-                        const habitCompletion = dailyData?.habitCompletions?.[habit.id];
-                        const isCompleted = habitCompletion?.completed || false;
-                        const isExcused = habitCompletion?.excused || false;
+                      {routineCompletion?.completed && routineCompletion?.habitTimes ? (
+                        // Show stacked bar graph if routine is completed
+                        <>
+                          {(() => {
+                            const { composition, totalSeconds } = getRoutineCompositionData(routine, routineCompletion);
+                            if (composition.length === 0) return null;
 
-                        return (
-                          <TouchableOpacity
-                            key={habit.id}
-                            onPress={() => router.push(`/routine/${routine.id}`)}
-                            style={{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              paddingVertical: 10,
-                              paddingHorizontal: 12,
-                              marginBottom: index < routineHabits.length - 1 ? 0 : 0,
-                              borderRadius: 8,
-                              backgroundColor: isCompleted ? '#f0f9f0' : isExcused ? '#f0f0f0' : '#f9f9f9',
-                            }}
-                          >
-                            <MaterialCommunityIcons
-                              name={isCompleted ? 'check-circle' : isExcused ? 'minus-circle' : 'circle-outline'}
-                              size={20}
-                              color={isCompleted ? AGM_GREEN : isExcused ? '#999999' : '#d1d5db'}
-                              style={{ marginRight: 12 }}
-                            />
-                            <View style={{ flex: 1 }}>
-                              <Text
+                            return (
+                              <>
+                                {/* Stacked Bar Chart */}
+                                <View
+                                  style={{
+                                    flexDirection: 'row',
+                                    height: 60,
+                                    borderRadius: 8,
+                                    overflow: 'hidden',
+                                    backgroundColor: '#f0f0f0',
+                                    marginBottom: 8,
+                                  }}
+                                >
+                                  {composition.map((item) => {
+                                    const percentage = totalSeconds > 0 ? (item.durationSeconds / totalSeconds) * 100 : 0;
+
+                                    return (
+                                      <View
+                                        key={item.habit.id}
+                                        style={{
+                                          flex: percentage,
+                                          backgroundColor: item.color,
+                                          justifyContent: 'center',
+                                          alignItems: 'center',
+                                          paddingHorizontal: 4,
+                                        }}
+                                      >
+                                        {percentage > 12 && (
+                                          <Text
+                                            style={{
+                                              fontSize: 10,
+                                              fontWeight: '600',
+                                              color: 'white',
+                                              textAlign: 'center',
+                                            }}
+                                            numberOfLines={1}
+                                          >
+                                            {formatTime(item.durationSeconds)}
+                                          </Text>
+                                        )}
+                                      </View>
+                                    );
+                                  })}
+                                </View>
+
+                                {/* Habit Breakdown */}
+                                <View style={{ paddingHorizontal: 4 }}>
+                                  {composition.map((item) => (
+                                    <View key={item.habit.id} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                                      <View
+                                        style={{
+                                          width: 10,
+                                          height: 10,
+                                          borderRadius: 2,
+                                          backgroundColor: item.color,
+                                          marginRight: 8,
+                                        }}
+                                      />
+                                      <Text style={{ fontSize: 12, color: AGM_DARK, flex: 1 }}>
+                                        {item.habit.name}
+                                      </Text>
+                                      <Text style={{ fontSize: 12, color: '#666' }}>
+                                        {formatTime(item.durationSeconds)}
+                                      </Text>
+                                    </View>
+                                  ))}
+                                </View>
+                              </>
+                            );
+                          })()}
+                        </>
+                      ) : (
+                        // Show habit list if routine is not completed
+                        <>
+                          {routineHabits.map((habit, index) => {
+                            const habitCompletion = dailyData?.habitCompletions?.[habit.id];
+                            const isCompleted = habitCompletion?.completed || false;
+                            const isExcused = habitCompletion?.excused || false;
+
+                            return (
+                              <TouchableOpacity
+                                key={habit.id}
+                                onPress={() => router.push(`/routine/${routine.id}`)}
                                 style={{
-                                  fontSize: 14,
-                                  fontWeight: '500',
-                                  color: isCompleted ? AGM_GREEN : isExcused ? '#999999' : AGM_DARK,
-                                  textDecorationLine: isCompleted || isExcused ? 'line-through' : 'none',
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  paddingVertical: 10,
+                                  paddingHorizontal: 12,
+                                  marginBottom: index < routineHabits.length - 1 ? 0 : 0,
+                                  borderRadius: 8,
+                                  backgroundColor: isCompleted ? '#f0f9f0' : isExcused ? '#f0f0f0' : '#f9f9f9',
                                 }}
                               >
-                                {habit.name}
-                              </Text>
-                              {habitCompletionStats[habit.id] !== undefined && (
-                                <Text style={{ fontSize: 11, color: '#ff6b6b', marginTop: 2 }}>
-                                  {habitCompletionStats[habit.id].completed}/{habitCompletionStats[habit.id].total}
-                                </Text>
-                              )}
-                              {isExcused && habitCompletion?.excuseReason && (
-                                <Text style={{ fontSize: 11, color: '#ff6b6b', marginTop: 2, fontStyle: 'italic' }}>
-                                  Excused: {habitCompletion.excuseReason}
-                                </Text>
-                              )}
-                            </View>
-                            {isCompleted && habitCompletion?.duration && (
-                              <Text style={{ fontSize: 11, color: '#999999' }}>
-                                {Math.floor(habitCompletion.duration / 1000)}s
-                              </Text>
-                            )}
-                          </TouchableOpacity>
-                        );
-                      })}
+                                <MaterialCommunityIcons
+                                  name={isCompleted ? 'check-circle' : isExcused ? 'minus-circle' : 'circle-outline'}
+                                  size={20}
+                                  color={isCompleted ? AGM_GREEN : isExcused ? '#999999' : '#d1d5db'}
+                                  style={{ marginRight: 12 }}
+                                />
+                                <View style={{ flex: 1 }}>
+                                  <Text
+                                    style={{
+                                      fontSize: 14,
+                                      fontWeight: '500',
+                                      color: isCompleted ? AGM_GREEN : isExcused ? '#999999' : AGM_DARK,
+                                      textDecorationLine: isCompleted || isExcused ? 'line-through' : 'none',
+                                    }}
+                                  >
+                                    {habit.name}
+                                  </Text>
+                                  {habitCompletionStats[habit.id] !== undefined && (
+                                    <Text style={{ fontSize: 11, color: '#ff6b6b', marginTop: 2 }}>
+                                      {habitCompletionStats[habit.id].completed}/{habitCompletionStats[habit.id].total}
+                                    </Text>
+                                  )}
+                                  {isExcused && habitCompletion?.excuseReason && (
+                                    <Text style={{ fontSize: 11, color: '#ff6b6b', marginTop: 2, fontStyle: 'italic' }}>
+                                      Excused: {habitCompletion.excuseReason}
+                                    </Text>
+                                  )}
+                                </View>
+                                {isCompleted && habitCompletion?.duration && (
+                                  <Text style={{ fontSize: 11, color: '#999999' }}>
+                                    {Math.floor(habitCompletion.duration / 1000)}s
+                                  </Text>
+                                )}
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </>
+                      )}
 
                       {/* Start Routine Button */}
                       {!routineCompletion?.completed && (

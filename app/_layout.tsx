@@ -23,40 +23,24 @@ function RootLayoutContent() {
   }, []);
 
   useEffect(() => {
-    // Force clear any persisted auth on app startup to ensure fresh session
-    const initializeAuth = async () => {
-      try {
-        // Try to sign out to clear any stale cached sessions
-        // This ensures we start with a fresh auth state
-        await authService.signOut().catch(() => {
-          // Silently ignore if sign out fails (not logged in)
-        });
-      } catch (error) {
-        // Ignore errors during force sign out
-        console.log('Clearing any cached auth...');
-      }
+    // Initialize auth service and listen to state changes
+    authService.init();
 
-      // Now initialize auth service
-      authService.init();
+    // Listen to auth state changes
+    const unsubscribe = authService.onAuthStateChanged((authUser) => {
+      setUser(authUser);
+      setInitializing(false);
+    });
 
-      // Listen to auth state changes
-      const unsubscribe = authService.onAuthStateChanged((authUser) => {
-        setUser(authUser);
-        setInitializing(false);
-      });
+    // Timeout failsafe - if auth doesn't resolve in 3 seconds, assume no user
+    const timer = setTimeout(() => {
+      setInitializing(false);
+    }, 3000);
 
-      // Timeout failsafe
-      const timer = setTimeout(() => {
-        setInitializing(false);
-      }, 3000);
-
-      return () => {
-        clearTimeout(timer);
-        unsubscribe();
-      };
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
     };
-
-    initializeAuth();
   }, []);
 
   // Wait for navigation to be ready

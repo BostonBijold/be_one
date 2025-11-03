@@ -181,8 +181,10 @@ class AuthService {
 
     onAuthStateChanged(auth, async (user: User | null) => {
       if (user) {
-        // Fetch admin status from Firestore
+        // Validate auth is working by checking Firestore access
         let isAdmin = false;
+        let isValidAuth = true;
+
         if (db) {
           try {
             const userDocRef = doc(db, 'users', user.uid);
@@ -190,20 +192,36 @@ class AuthService {
             if (userDoc.exists()) {
               isAdmin = userDoc.data()?.userInfo?.isAdmin || false;
             }
-          } catch (error) {
-            console.warn('Could not fetch admin status:', error);
+          } catch (error: any) {
+            // If we get permission errors, the cached auth is invalid
+            if (error.code === 'permission-denied' || error.message?.includes('permission')) {
+              console.warn('Cached auth is invalid, clearing session:', error.message);
+              isValidAuth = false;
+              // Sign out the invalid cached session
+              try {
+                await signOut(auth);
+              } catch (signOutError) {
+                console.warn('Error signing out invalid session:', signOutError);
+              }
+            } else {
+              console.warn('Could not fetch admin status:', error);
+            }
           }
         }
 
-        this.currentUser = {
-          uid: user.uid,
-          name: user.displayName || '',
-          email: user.email || '',
-          photoURL: user.photoURL || '',
-          isAdmin: isAdmin,
-          createdAt: user.metadata.creationTime || '',
-          lastSignIn: user.metadata.lastSignInTime || '',
-        };
+        if (isValidAuth) {
+          this.currentUser = {
+            uid: user.uid,
+            name: user.displayName || '',
+            email: user.email || '',
+            photoURL: user.photoURL || '',
+            isAdmin: isAdmin,
+            createdAt: user.metadata.creationTime || '',
+            lastSignIn: user.metadata.lastSignInTime || '',
+          };
+        } else {
+          this.currentUser = null;
+        }
       } else {
         this.currentUser = null;
       }

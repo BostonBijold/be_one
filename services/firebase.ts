@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { initializeAuth, getReactNativePersistence, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
 // Firebase configuration from environment variables
@@ -28,13 +29,15 @@ let app, auth, db, googleProvider;
 if (isFirebaseConfigured()) {
   try {
     app = initializeApp(firebaseConfig);
-    // Use getAuth() which works on both web and React Native
-    auth = getAuth(app);
+    // Initialize auth with AsyncStorage persistence for React Native
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(ReactNativeAsyncStorage)
+    });
     db = getFirestore(app);
     googleProvider = new GoogleAuthProvider();
     googleProvider.addScope('profile');
     googleProvider.addScope('email');
-    console.log('Firebase initialized successfully');
+    console.log('Firebase initialized successfully with AsyncStorage persistence');
   } catch (error) {
     console.error('Firebase initialization failed:', error);
   }

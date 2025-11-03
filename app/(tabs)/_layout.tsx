@@ -30,8 +30,8 @@ export default function TabLayout() {
             height: 100,
             paddingBottom: 16,
             paddingTop: 12,
-            paddingHorizontal: 8,
-            justifyContent: 'space-around',
+            paddingHorizontal: 32,
+            justifyContent: 'space-between',
           },
           tabBarLabelStyle: {
             fontSize: 11,

@@ -1,7 +1,6 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
+import React from 'react';
 import { TouchableOpacity, View } from 'react-native';
 
 export default function TabLayout() {
@@ -24,22 +23,21 @@ export default function TabLayout() {
           tabBarInactiveTintColor: '#999999',
           headerShown: false,
           tabBarStyle: {
-            backgroundColor: AGM_STONE,
-            borderTopColor: '#d0ccc0',
+            backgroundColor: '#ffffff',
+            borderTopColor: '#e5e5e5',
             borderTopWidth: 1,
-            height: 100,
-            paddingBottom: 16,
-            paddingTop: 12,
-            paddingHorizontal: 32,
-            justifyContent: 'space-between',
+            height: 88,
+            paddingBottom: 20,
+            paddingTop: 8,
+            paddingHorizontal: 8,
           },
           tabBarLabelStyle: {
             fontSize: 11,
             fontWeight: '600',
-            marginTop: 6,
+            marginTop: 4,
           },
           tabBarIconStyle: {
-            marginBottom: 2,
+            marginBottom: 0,
           },
         }}
       >
@@ -60,7 +58,7 @@ export default function TabLayout() {
               <MaterialCommunityIcons name="repeat" size={26} color={color} />
             ),
             tabBarItemStyle: {
-              marginRight: 24,
+              marginRight: 40,
             },
           }}
         />
@@ -83,13 +81,10 @@ export default function TabLayout() {
               <MaterialCommunityIcons name="history" size={26} color={color} />
             ),
             tabBarItemStyle: {
-              marginLeft: 24,
+              marginLeft: 40,
             },
           }}
         />
-        {/* Habits tab hidden - accessible from Routines tab */}
-        {/* Admin tab hidden - accessible from Settings tab */}
-
         <Tabs.Screen
           name="settings"
           options={{
@@ -101,17 +96,17 @@ export default function TabLayout() {
         />
       </Tabs>
 
-      {/* FAB Container with background glow */}
+      {/* FAB Background Glow */}
       <View
         style={{
           position: 'absolute',
-          bottom: 35,
+          bottom: 32,
           left: '50%',
-          marginLeft: -45,
-          width: 90,
-          height: 90,
-          borderRadius: 45,
-          backgroundColor: 'rgba(75, 83, 32, 0.1)',
+          marginLeft: -42,
+          width: 84,
+          height: 84,
+          borderRadius: 42,
+          backgroundColor: 'rgba(255, 255, 255, 0.6)',
           justifyContent: 'center',
           alignItems: 'center',
           zIndex: 10,
@@ -121,28 +116,29 @@ export default function TabLayout() {
       {/* Floating Action Button (FAB) - Start Button */}
       <TouchableOpacity
         onPress={handleFABPress}
+        activeOpacity={0.8}
         style={{
           position: 'absolute',
-          bottom: 42,
+          bottom: 38,
           left: '50%',
-          marginLeft: -38,
-          width: 76,
-          height: 76,
-          borderRadius: 38,
+          marginLeft: -36,
+          width: 72,
+          height: 72,
+          borderRadius: 36,
           backgroundColor: AGM_GREEN,
           justifyContent: 'center',
           alignItems: 'center',
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.25,
-          shadowRadius: 10,
+          shadowColor: '#ffffff',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
           elevation: 12,
           zIndex: 50,
-          borderWidth: 2,
-          borderColor: 'rgba(255, 255, 255, 0.2)',
+          borderWidth: 4,
+          borderColor: '#ffffff',
         }}
       >
-        <MaterialCommunityIcons name="play" size={42} color="white" />
+        <MaterialCommunityIcons name="play" size={36} color="white" />
       </TouchableOpacity>
     </View>
   );

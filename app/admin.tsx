@@ -2,6 +2,7 @@ import { useAuth } from '@/hooks/useAuth';
 import dataService, { Challenge, Virtue } from '@/services/dataService';
 import { createTestData, deleteTestData } from '@/services/testDataSetup';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -20,6 +21,7 @@ const AGM_DARK = '#333333';
 const AGM_STONE = '#f5f1e8';
 
 export default function AdminScreen() {
+  const router = useRouter();
   const { user } = useAuth();
   const [weeklyVirtue, setWeeklyVirtue] = useState<string>('');
   const [challenges, setChallenges] = useState<Challenge[]>([]);
@@ -295,6 +297,13 @@ export default function AdminScreen() {
       <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
         {/* Header */}
         <View style={{ backgroundColor: AGM_DARK, paddingHorizontal: 24, paddingVertical: 32 }}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}
+          >
+            <MaterialCommunityIcons name="chevron-left" size={28} color="white" />
+            <Text style={{ color: 'white', fontSize: 16 }}>Back</Text>
+          </TouchableOpacity>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
             <MaterialCommunityIcons name="shield-admin" size={32} color="white" style={{ marginRight: 12 }} />
             <Text style={{ color: 'white', fontSize: 32, fontWeight: 'bold' }}>

@@ -34,6 +34,7 @@ export default function DashboardScreen() {
   const [expandedRoutines, setExpandedRoutines] = useState<number[]>([]);
   const [weekVirtueObject, setWeekVirtueObject] = useState<any>(null);
   const [habitCompletionStats, setHabitCompletionStats] = useState<Record<number, { completed: number; total: number }>>({});
+  const [sevenDayData, setSevenDayData] = useState<Record<string, DailyData | null>>({});
 
   const todayString = dataService.getTodayString();
 
@@ -76,6 +77,14 @@ export default function DashboardScreen() {
     setHabitCompletionStats(stats);
   };
 
+  // Format date to YYYY-MM-DD
+  const formatDateString = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Load all data directly
   const loadData = async () => {
     try {
@@ -89,6 +98,21 @@ export default function DashboardScreen() {
         dataService.getTodayData(todayString),
         dataService.getWeeklyVirtueObject(),
       ]);
+
+      // Load past 7 days of data in background
+      const sevenDays: Record<string, DailyData | null> = {};
+      for (let daysAgo = 6; daysAgo >= 0; daysAgo--) {
+        const date = new Date();
+        date.setDate(date.getDate() - daysAgo);
+        const dateString = formatDateString(date);
+        try {
+          const dayData = await dataService.getDailyData(dateString);
+          sevenDays[dateString] = dayData;
+        } catch {
+          sevenDays[dateString] = null;
+        }
+      }
+      setSevenDayData(sevenDays);
 
       console.log('Dashboard - Data loaded:', {
         routinesCount: routinesData.length,
@@ -311,6 +335,50 @@ export default function DashboardScreen() {
     const totalSeconds = composition.reduce((sum, c) => sum + c.durationSeconds, 0);
 
     return { composition, totalSeconds };
+  };
+
+  // Calculate average routine composition from 7-day data
+  const getAverageRoutineComposition = (routine: Routine): { composition: Array<any>; averageTotal: number } => {
+    const routineHabits = getRoutineHabits(routine.habits);
+    const colors = ['#4b5320', '#8b7355', '#5a8a6b', '#a89b6f', '#6b8f9a', '#9b7b8f', '#8a7b6b'];
+
+    // Count completed days and sum durations for each habit
+    const habitDurations: Record<number, { total: number; count: number }> = {};
+
+    Object.values(sevenDayData).forEach((dayData) => {
+      if (dayData && dayData.routineCompletions?.[routine.id]?.completed) {
+        const routineCompletion = dayData.routineCompletions[routine.id];
+        if (routineCompletion.habitTimes) {
+          Object.keys(routineCompletion.habitTimes).forEach((habitId) => {
+            const id = parseInt(habitId);
+            const timing = routineCompletion.habitTimes[id];
+            if (timing && timing.duration) {
+              if (!habitDurations[id]) {
+                habitDurations[id] = { total: 0, count: 0 };
+              }
+              habitDurations[id].total += timing.duration;
+              habitDurations[id].count += 1;
+            }
+          });
+        }
+      }
+    });
+
+    // Calculate averages
+    const composition = routineHabits.map((habit, index) => {
+      const durationData = habitDurations[habit.id];
+      const averageSeconds = durationData ? Math.round(durationData.total / 1000 / durationData.count) : 0;
+
+      return {
+        habit,
+        durationSeconds: averageSeconds,
+        color: colors[index % colors.length],
+      };
+    });
+
+    const averageTotal = composition.reduce((sum, c) => sum + c.durationSeconds, 0);
+
+    return { composition, averageTotal };
   };
 
   // Get standalone habits (not in routines)
@@ -629,51 +697,109 @@ export default function DashboardScreen() {
                         <>
                           {(() => {
                             const { composition, totalSeconds } = getRoutineCompositionData(routine, routineCompletion);
+                            const { averageTotal } = getAverageRoutineComposition(routine);
                             if (composition.length === 0) return null;
+
+                            const averagePercentage = totalSeconds > 0 ? (averageTotal / totalSeconds) * 100 : 0;
+                            const isAheadOfAverage = totalSeconds > averageTotal;
 
                             return (
                               <>
-                                {/* Stacked Bar Chart */}
+                                {/* Labels - Today vs Average */}
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                                  <View>
+                                    <Text style={{ fontSize: 12, fontWeight: '600', color: AGM_DARK }}>Today</Text>
+                                    <Text style={{ fontSize: 11, color: '#666' }}>{formatTime(totalSeconds)}</Text>
+                                  </View>
+                                  <View style={{ alignItems: 'flex-end' }}>
+                                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#666' }}>7-Day Avg</Text>
+                                    <Text style={{ fontSize: 11, color: '#999' }}>{formatTime(averageTotal)}</Text>
+                                  </View>
+                                </View>
+
+                                {/* Stacked Bar Chart with Average Line */}
+                                <View style={{ position: 'relative' }}>
+                                  <View
+                                    style={{
+                                      flexDirection: 'row',
+                                      height: 60,
+                                      borderRadius: 8,
+                                      overflow: 'hidden',
+                                      backgroundColor: '#f0f0f0',
+                                      marginBottom: 8,
+                                      position: 'relative',
+                                    }}
+                                  >
+                                    {composition.map((item) => {
+                                      const percentage = totalSeconds > 0 ? (item.durationSeconds / totalSeconds) * 100 : 0;
+
+                                      return (
+                                        <View
+                                          key={item.habit.id}
+                                          style={{
+                                            flex: percentage,
+                                            backgroundColor: item.color,
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            paddingHorizontal: 4,
+                                          }}
+                                        >
+                                          {percentage > 12 && (
+                                            <Text
+                                              style={{
+                                                fontSize: 10,
+                                                fontWeight: '600',
+                                                color: 'white',
+                                                textAlign: 'center',
+                                              }}
+                                              numberOfLines={1}
+                                            >
+                                              {formatTime(item.durationSeconds)}
+                                            </Text>
+                                          )}
+                                        </View>
+                                      );
+                                    })}
+                                  </View>
+
+                                  {/* Average Line Overlay */}
+                                  {averagePercentage > 0 && averagePercentage < 100 && (
+                                    <View
+                                      style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: `${averagePercentage}%`,
+                                        width: 2,
+                                        height: 60,
+                                        backgroundColor: '#ef4444',
+                                        borderRadius: 1,
+                                      }}
+                                    />
+                                  )}
+                                </View>
+
+                                {/* Comparison Badge */}
                                 <View
                                   style={{
-                                    flexDirection: 'row',
-                                    height: 60,
-                                    borderRadius: 8,
-                                    overflow: 'hidden',
-                                    backgroundColor: '#f0f0f0',
-                                    marginBottom: 8,
+                                    marginBottom: 12,
+                                    paddingHorizontal: 12,
+                                    paddingVertical: 6,
+                                    borderRadius: 6,
+                                    backgroundColor: isAheadOfAverage ? '#f0f9f0' : '#fff5f5',
+                                    alignItems: 'center',
                                   }}
                                 >
-                                  {composition.map((item) => {
-                                    const percentage = totalSeconds > 0 ? (item.durationSeconds / totalSeconds) * 100 : 0;
-
-                                    return (
-                                      <View
-                                        key={item.habit.id}
-                                        style={{
-                                          flex: percentage,
-                                          backgroundColor: item.color,
-                                          justifyContent: 'center',
-                                          alignItems: 'center',
-                                          paddingHorizontal: 4,
-                                        }}
-                                      >
-                                        {percentage > 12 && (
-                                          <Text
-                                            style={{
-                                              fontSize: 10,
-                                              fontWeight: '600',
-                                              color: 'white',
-                                              textAlign: 'center',
-                                            }}
-                                            numberOfLines={1}
-                                          >
-                                            {formatTime(item.durationSeconds)}
-                                          </Text>
-                                        )}
-                                      </View>
-                                    );
-                                  })}
+                                  <Text
+                                    style={{
+                                      fontSize: 12,
+                                      fontWeight: '600',
+                                      color: isAheadOfAverage ? AGM_GREEN : '#ef4444',
+                                    }}
+                                  >
+                                    {isAheadOfAverage
+                                      ? `+${formatTime(totalSeconds - averageTotal)} over average`
+                                      : `${formatTime(averageTotal - totalSeconds)} under average`}
+                                  </Text>
                                 </View>
 
                                 {/* Habit Breakdown */}

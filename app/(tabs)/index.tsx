@@ -35,6 +35,7 @@ export default function DashboardScreen() {
   const [weekVirtueObject, setWeekVirtueObject] = useState<any>(null);
   const [habitCompletionStats, setHabitCompletionStats] = useState<Record<number, { completed: number; total: number }>>({});
   const [sevenDayData, setSevenDayData] = useState<Record<string, DailyData | null>>({});
+  const [showDailyReport, setShowDailyReport] = useState(false);
 
   const todayString = dataService.getTodayString();
 
@@ -381,6 +382,59 @@ export default function DashboardScreen() {
     return { composition, averageTotal };
   };
 
+  // Find the next incomplete routine
+  const getNextIncompleteRoutine = (): Routine | null => {
+    return routines.find((r) => !dailyData?.routineCompletions?.[r.id]?.completed) || null;
+  };
+
+  // Check if all routines are completed
+  const areAllRoutinesComplete = (): boolean => {
+    if (routines.length === 0) return true;
+    return routines.every((r) => dailyData?.routineCompletions?.[r.id]?.completed);
+  };
+
+  // Check if virtue checkin is completed
+  const isVirtueCheckinComplete = (): boolean => {
+    return dailyData?.virtueCheckIns?.[weekVirtueObject?.id] !== undefined;
+  };
+
+  // Determine action button state
+  const getActionButtonState = (): { label: string; action: () => void; showButton: boolean } => {
+    if (showDailyReport) {
+      return { label: 'Close', action: () => setShowDailyReport(false), showButton: false };
+    }
+
+    const nextRoutine = getNextIncompleteRoutine();
+    const allRoutinesDone = areAllRoutinesComplete();
+    const virtueCheckinDone = isVirtueCheckinComplete();
+
+    if (nextRoutine) {
+      return {
+        label: 'Start Next',
+        action: () => router.push(`/routine/${nextRoutine.id}`),
+        showButton: true,
+      };
+    }
+
+    if (allRoutinesDone && !virtueCheckinDone && weekVirtueObject) {
+      return {
+        label: 'Start Virtue Check-in',
+        action: () => router.push('/virtues'),
+        showButton: true,
+      };
+    }
+
+    if (allRoutinesDone && virtueCheckinDone) {
+      return {
+        label: 'View Daily Report',
+        action: () => setShowDailyReport(true),
+        showButton: true,
+      };
+    }
+
+    return { label: '', action: () => {}, showButton: false };
+  };
+
   // Get standalone habits (not in routines)
   const standaloneHabits = habits.filter((h) => !h.routineId);
 
@@ -414,12 +468,184 @@ export default function DashboardScreen() {
     );
   }
 
+  // If showing daily report, show full-page report instead
+  if (showDailyReport) {
+    const { label: actionLabel, action: actionHandler } = getActionButtonState();
+
+    // Calculate daily stats
+    const totalRoutineTime = Object.values(dailyData?.routineCompletions || {}).reduce((sum, rc: any) => {
+      if (!rc.habitTimes) return sum;
+      return sum + Object.values(rc.habitTimes).reduce((habitSum: number, ht: any) => habitSum + (ht.duration || 0), 0);
+    }, 0);
+
+    const completedRoutinesCount = Object.values(dailyData?.routineCompletions || {}).filter((rc: any) => rc.completed).length;
+    const virtueCheckinDone = isVirtueCheckinComplete();
+
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: AGM_STONE }}>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {/* Header */}
+          <View style={{ paddingHorizontal: 16, paddingTop: 24, paddingBottom: 16 }}>
+            <View style={{ alignItems: 'center' }}>
+              <MaterialCommunityIcons name="check-circle" size={64} color={AGM_GREEN} />
+              <Text style={{ fontSize: 28, fontWeight: 'bold', color: AGM_DARK, marginTop: 16, textAlign: 'center' }}>
+                Great Job Today!
+              </Text>
+              <Text style={{ fontSize: 16, color: '#666666', marginTop: 8, textAlign: 'center' }}>
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+              </Text>
+            </View>
+          </View>
+
+          {/* Summary Stats */}
+          <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+            <View style={{ backgroundColor: 'white', borderRadius: 16, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16 }}>
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={{ fontSize: 28, fontWeight: 'bold', color: AGM_GREEN }}>
+                    {completedRoutinesCount}
+                  </Text>
+                  <Text style={{ fontSize: 13, color: '#666666', marginTop: 4 }}>
+                    Routines Completed
+                  </Text>
+                </View>
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={{ fontSize: 28, fontWeight: 'bold', color: AGM_GREEN }}>
+                    {formatTime(Math.round(totalRoutineTime / 1000))}
+                  </Text>
+                  <Text style={{ fontSize: 13, color: '#666666', marginTop: 4 }}>
+                    Total Time
+                  </Text>
+                </View>
+                <View style={{ alignItems: 'center' }}>
+                  <MaterialCommunityIcons
+                    name={virtueCheckinDone ? 'check-circle' : 'circle-outline'}
+                    size={28}
+                    color={virtueCheckinDone ? AGM_GREEN : '#d1d5db'}
+                  />
+                  <Text style={{ fontSize: 13, color: '#666666', marginTop: 4 }}>
+                    Virtue Check-in
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Routine Breakdowns */}
+          {Object.values(dailyData?.routineCompletions || {}).some((rc: any) => rc.completed) && (
+            <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+              <Text style={{ fontSize: 18, fontWeight: '600', color: AGM_DARK, marginBottom: 12 }}>
+                Routine Breakdowns
+              </Text>
+
+              {routines.map((routine) => {
+                const routineCompletion = dailyData?.routineCompletions?.[routine.id];
+                if (!routineCompletion?.completed || !routineCompletion.habitTimes) return null;
+
+                const { composition, totalSeconds } = getRoutineCompositionData(routine, routineCompletion);
+                if (composition.length === 0) return null;
+
+                return (
+                  <View
+                    key={routine.id}
+                    style={{
+                      backgroundColor: 'white',
+                      borderRadius: 12,
+                      padding: 16,
+                      marginBottom: 12,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 1 },
+                      shadowOpacity: 0.05,
+                      shadowRadius: 2,
+                      elevation: 2,
+                    }}
+                  >
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: AGM_DARK, marginBottom: 8 }}>
+                      {routine.name}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: '#666666', marginBottom: 12 }}>
+                      Total: {formatTime(totalSeconds)}
+                    </Text>
+
+                    {/* Stacked Bar */}
+                    <View style={{ flexDirection: 'row', height: 40, borderRadius: 6, overflow: 'hidden', backgroundColor: '#f0f0f0', marginBottom: 8 }}>
+                      {composition.map((item) => {
+                        const percentage = totalSeconds > 0 ? (item.durationSeconds / totalSeconds) * 100 : 0;
+                        return (
+                          <View
+                            key={item.habit.id}
+                            style={{
+                              flex: percentage,
+                              backgroundColor: item.color,
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                            }}
+                          >
+                            {percentage > 15 && (
+                              <Text style={{ fontSize: 9, fontWeight: '600', color: 'white' }} numberOfLines={1}>
+                                {formatTime(item.durationSeconds)}
+                              </Text>
+                            )}
+                          </View>
+                        );
+                      })}
+                    </View>
+
+                    {/* Habit Details */}
+                    <View>
+                      {composition.map((item) => (
+                        <View key={item.habit.id} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4, paddingHorizontal: 4 }}>
+                          <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: item.color, marginRight: 8 }} />
+                          <Text style={{ fontSize: 11, color: AGM_DARK, flex: 1 }}>
+                            {item.habit.name}
+                          </Text>
+                          <Text style={{ fontSize: 11, color: '#666666' }}>
+                            {formatTime(item.durationSeconds)}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {/* Bottom Padding */}
+          <View style={{ height: 120 }} />
+        </ScrollView>
+
+        {/* Close Button */}
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: AGM_STONE, paddingHorizontal: 16, paddingVertical: 12 }}>
+          <TouchableOpacity
+            onPress={() => setShowDailyReport(false)}
+            style={{
+              backgroundColor: AGM_GREEN,
+              borderRadius: 12,
+              paddingVertical: 16,
+              alignItems: 'center',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.15,
+              shadowRadius: 8,
+              elevation: 5,
+            }}
+          >
+            <Text style={{ color: 'white', fontSize: 16, fontWeight: '700' }}>
+              Back to Dashboard
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: AGM_STONE }}>
       {/* App Header - Static */}
       <AppHeader />
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
         {/* Week's Virtue & Daily Challenge Combined Card */}
         {(weeklyVirtue || dailyData?.dailyChallenge) && (
           <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>
@@ -1005,6 +1231,57 @@ export default function DashboardScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Persistent Action Button */}
+      {(() => {
+        const { label, action, showButton } = getActionButtonState();
+        if (!showButton) return null;
+
+        return (
+          <View
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              backgroundColor: AGM_STONE,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: -4 },
+              shadowOpacity: 0.1,
+              shadowRadius: 8,
+              elevation: 10,
+            }}
+          >
+            <TouchableOpacity
+              onPress={action}
+              style={{
+                backgroundColor: AGM_GREEN,
+                borderRadius: 12,
+                paddingVertical: 16,
+                alignItems: 'center',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.15,
+                shadowRadius: 8,
+                elevation: 5,
+              }}
+            >
+              <Text
+                style={{
+                  color: 'white',
+                  fontSize: 16,
+                  fontWeight: '700',
+                  letterSpacing: 0.5,
+                }}
+              >
+                {label}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        );
+      })()}
     </SafeAreaView>
   );
 }

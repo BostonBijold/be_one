@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   SafeAreaView,
+  Modal,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -34,6 +35,17 @@ export default function RoutineDetailScreen() {
   const [habitStartTimes, setHabitStartTimes] = useState<{ [habitId: number]: number }>({});
   const [routineStartTime, setRoutineStartTime] = useState<number | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Excuse modal state
+  const [showExcuseModal, setShowExcuseModal] = useState(false);
+  const [selectedExcuseReason, setSelectedExcuseReason] = useState<string>('');
+  const [excuseReasons] = useState([
+    'Sick Day',
+    'Travel',
+    'Family Emergency',
+    'Work Conflict',
+    'Weather',
+  ]);
 
   const todayString = dataService.getTodayString();
 
@@ -302,6 +314,59 @@ export default function RoutineDetailScreen() {
     }
   };
 
+  // Handle excuse habit
+  const handleExcuseHabit = async () => {
+    if (!currentHabit || !selectedExcuseReason) {
+      Alert.alert('Error', 'Please select a reason');
+      return;
+    }
+
+    try {
+      // Initialize dailyData if it doesn't exist
+      const updatedDailyData = dailyData || {
+        date: todayString,
+        habitCompletions: {},
+        routineCompletions: {},
+      };
+
+      if (!updatedDailyData.habitCompletions) {
+        updatedDailyData.habitCompletions = {};
+      }
+
+      // Mark habit as excused (not completed, but excused)
+      updatedDailyData.habitCompletions[currentHabit.id] = {
+        completed: false,
+        completedAt: null,
+        duration: null,
+        startTime: null,
+        endTime: null,
+        notes: '',
+        excused: true,
+        excuseReason: selectedExcuseReason,
+      };
+
+      // Save to Firebase
+      await dataService.updateDailyData(todayString, updatedDailyData);
+      setDailyData(updatedDailyData);
+
+      // Close modal and reset
+      setShowExcuseModal(false);
+      setSelectedExcuseReason('');
+
+      // Move to next habit
+      if (currentHabitIndex < habits.length - 1) {
+        setCurrentHabitIndex(currentHabitIndex + 1);
+      } else {
+        Alert.alert('Done', 'No more habits in this routine', [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
+      }
+    } catch (error: any) {
+      console.error('Error excusing habit:', error);
+      Alert.alert('Error', error.message || 'Failed to excuse habit');
+    }
+  };
+
   // Handle previous habit
   const handlePreviousHabit = () => {
     if (currentHabitIndex > 0) {
@@ -530,6 +595,28 @@ export default function RoutineDetailScreen() {
                     color={currentHabitIndex === habits.length - 1 ? '#999999' : AGM_DARK}
                   />
                 </TouchableOpacity>
+
+                {/* Excuse Button (only if habit is excusable) */}
+                {currentHabit?.excusable && (
+                  <TouchableOpacity
+                    onPress={() => setShowExcuseModal(true)}
+                    style={{
+                      width: 50,
+                      height: 50,
+                      borderRadius: 25,
+                      backgroundColor: '#f0f0f0',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginLeft: 12,
+                    }}
+                  >
+                    <MaterialCommunityIcons
+                      name="clock-remove"
+                      size={24}
+                      color="#ff6b6b"
+                    />
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </View>
@@ -631,6 +718,119 @@ export default function RoutineDetailScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Excuse Modal */}
+      <Modal
+        visible={showExcuseModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          setShowExcuseModal(false);
+          setSelectedExcuseReason('');
+        }}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View
+            style={{
+              backgroundColor: 'white',
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              paddingHorizontal: 24,
+              paddingVertical: 24,
+              paddingBottom: 32,
+            }}
+          >
+            {/* Header */}
+            <Text style={{ fontSize: 18, fontWeight: 'bold', color: AGM_DARK, marginBottom: 8 }}>
+              Why are you skipping this?
+            </Text>
+            <Text style={{ fontSize: 14, color: '#666666', marginBottom: 24 }}>
+              Select a reason for skipping {currentHabit?.name}
+            </Text>
+
+            {/* Excuse Reason Options */}
+            <View style={{ marginBottom: 24, gap: 12 }}>
+              {excuseReasons.map((reason) => (
+                <TouchableOpacity
+                  key={reason}
+                  onPress={() => setSelectedExcuseReason(reason)}
+                  style={{
+                    borderWidth: 2,
+                    borderColor: selectedExcuseReason === reason ? AGM_GREEN : '#e5e7eb',
+                    borderRadius: 12,
+                    paddingVertical: 16,
+                    paddingHorizontal: 16,
+                    backgroundColor: selectedExcuseReason === reason ? '#f0f8f0' : '#ffffff',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: 10,
+                      borderWidth: 2,
+                      borderColor: selectedExcuseReason === reason ? AGM_GREEN : '#d1d5db',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginRight: 12,
+                    }}
+                  >
+                    {selectedExcuseReason === reason && (
+                      <View
+                        style={{
+                          width: 12,
+                          height: 12,
+                          borderRadius: 6,
+                          backgroundColor: AGM_GREEN,
+                        }}
+                      />
+                    )}
+                  </View>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: AGM_DARK, flex: 1 }}>
+                    {reason}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Action Buttons */}
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowExcuseModal(false);
+                  setSelectedExcuseReason('');
+                }}
+                style={{
+                  flex: 1,
+                  borderWidth: 1,
+                  borderColor: '#e5e7eb',
+                  borderRadius: 8,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ color: AGM_DARK, fontWeight: '600', fontSize: 14 }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleExcuseHabit}
+                disabled={!selectedExcuseReason}
+                style={{
+                  flex: 1,
+                  backgroundColor: selectedExcuseReason ? AGM_GREEN : '#d1d5db',
+                  borderRadius: 8,
+                  paddingVertical: 12,
+                  alignItems: 'center',
+                  opacity: selectedExcuseReason ? 1 : 0.6,
+                }}
+              >
+                <Text style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>Mark as Excused</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

@@ -1,5 +1,6 @@
 import { useAuth } from '@/hooks/useAuth';
 import dataService, { DailyData, Habit, Routine } from '@/services/dataService';
+import AppHeader from '@/components/AppHeader';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import React, { useEffect, useState, useCallback } from 'react';
@@ -30,7 +31,7 @@ export default function DashboardScreen() {
   const [error, setError] = useState<string | null>(null);
   const [expandedRoutines, setExpandedRoutines] = useState<number[]>([]);
   const [weekVirtueObject, setWeekVirtueObject] = useState<any>(null);
-  const [habitStreaks, setHabitStreaks] = useState<Record<number, number>>({});
+  const [habitCompletionStats, setHabitCompletionStats] = useState<Record<number, { completed: number; total: number }>>({});
 
   const todayString = dataService.getTodayString();
 
@@ -56,57 +57,21 @@ export default function DashboardScreen() {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Calculate habit streak by checking consecutive days of completion
-  const calculateHabitStreaks = async (habitsData: Habit[], todayDailyData: DailyData | null) => {
-    const streaks: Record<number, number> = {};
-
-    // Helper function to format a date as YYYY-MM-DD
-    const formatDateString = (date: Date): string => {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
+  // Calculate habit completion stats (completed days and total days)
+  const calculateHabitCompletionStats = async (habitsData: Habit[]) => {
+    const stats: Record<number, { completed: number; total: number }> = {};
 
     for (const habit of habitsData) {
-      let streak = 0;
-      let currentDate = new Date();
-
-      // Check up to 365 days back
-      for (let i = 0; i < 365; i++) {
-        const dateString = formatDateString(currentDate);
-        let dailyDataForDate: DailyData | null = null;
-
-        if (i === 0) {
-          // Use the already loaded today's data
-          dailyDataForDate = todayDailyData;
-        } else {
-          // Fetch daily data for previous dates
-          try {
-            dailyDataForDate = await dataService.getTodayData(dateString);
-          } catch {
-            dailyDataForDate = null;
-          }
-        }
-
-        // Check if habit was completed on this date
-        const isCompleted = dailyDataForDate?.habitCompletions?.[habit.id]?.completed || false;
-
-        if (isCompleted) {
-          streak++;
-        } else {
-          // Streak broken, stop counting
-          break;
-        }
-
-        // Move to previous day
-        currentDate.setDate(currentDate.getDate() - 1);
+      try {
+        const completionStats = await dataService.getHabitCompletionStats(habit.id, 365);
+        stats[habit.id] = completionStats;
+      } catch (error) {
+        console.error(`Error calculating stats for habit ${habit.id}:`, error);
+        stats[habit.id] = { completed: 0, total: 0 };
       }
-
-      streaks[habit.id] = streak;
     }
 
-    setHabitStreaks(streaks);
+    setHabitCompletionStats(stats);
   };
 
   // Load all data directly
@@ -138,8 +103,10 @@ export default function DashboardScreen() {
       setWeeklyVirtue(weeklyVirtueData?.name || null);
       setWeekVirtueObject(weeklyVirtueData);
 
-      // Calculate streaks for all habits in the background
-      calculateHabitStreaks(habitsData, dailyDataResult);
+      // Calculate completion stats for all habits in the background (after a delay to not block UI)
+      setTimeout(() => {
+        calculateHabitCompletionStats(habitsData);
+      }, 500);
 
       // Auto-load daily challenge if weekly virtue exists
       // Always load/update challenge to match the current weekly virtue
@@ -340,33 +307,10 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: AGM_STONE }}>
+      {/* App Header - Static */}
+      <AppHeader />
+
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={{ backgroundColor: AGM_DARK, paddingHorizontal: 24, paddingVertical: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          {/* Logo on the left */}
-          <View style={{ width: 40 }}>
-            <Image
-              source={require('@/assets/images/agm_logo_white.png')}
-              style={{ width: 40, height: 40, resizeMode: 'contain' }}
-            />
-          </View>
-
-          {/* App name in the center */}
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={{ color: 'white', fontSize: 24, fontWeight: 'bold' }}>
-              be one.
-            </Text>
-          </View>
-
-          {/* Settings menu on the right */}
-          <TouchableOpacity
-            onPress={() => router.push('/settings')}
-            style={{ width: 40, alignItems: 'flex-end' }}
-          >
-            <MaterialCommunityIcons name="account-circle" size={32} color={AGM_GREEN} />
-          </TouchableOpacity>
-        </View>
-
         {/* Week's Virtue & Daily Challenge Combined Card */}
         {(weeklyVirtue || dailyData?.dailyChallenge) && (
           <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>
@@ -642,6 +586,7 @@ export default function DashboardScreen() {
                       {routineHabits.map((habit, index) => {
                         const habitCompletion = dailyData?.habitCompletions?.[habit.id];
                         const isCompleted = habitCompletion?.completed || false;
+                        const isExcused = habitCompletion?.excused || false;
 
                         return (
                           <TouchableOpacity
@@ -654,13 +599,13 @@ export default function DashboardScreen() {
                               paddingHorizontal: 12,
                               marginBottom: index < routineHabits.length - 1 ? 0 : 0,
                               borderRadius: 8,
-                              backgroundColor: isCompleted ? '#f0f9f0' : '#f9f9f9',
+                              backgroundColor: isCompleted ? '#f0f9f0' : isExcused ? '#f0f0f0' : '#f9f9f9',
                             }}
                           >
                             <MaterialCommunityIcons
-                              name={isCompleted ? 'check-circle' : 'circle-outline'}
+                              name={isCompleted ? 'check-circle' : isExcused ? 'minus-circle' : 'circle-outline'}
                               size={20}
-                              color={isCompleted ? AGM_GREEN : '#d1d5db'}
+                              color={isCompleted ? AGM_GREEN : isExcused ? '#999999' : '#d1d5db'}
                               style={{ marginRight: 12 }}
                             />
                             <View style={{ flex: 1 }}>
@@ -668,12 +613,22 @@ export default function DashboardScreen() {
                                 style={{
                                   fontSize: 14,
                                   fontWeight: '500',
-                                  color: isCompleted ? AGM_GREEN : AGM_DARK,
-                                  textDecorationLine: isCompleted ? 'line-through' : 'none',
+                                  color: isCompleted ? AGM_GREEN : isExcused ? '#999999' : AGM_DARK,
+                                  textDecorationLine: isCompleted || isExcused ? 'line-through' : 'none',
                                 }}
                               >
                                 {habit.name}
                               </Text>
+                              {habitCompletionStats[habit.id] !== undefined && (
+                                <Text style={{ fontSize: 11, color: '#ff6b6b', marginTop: 2 }}>
+                                  {habitCompletionStats[habit.id].completed}/{habitCompletionStats[habit.id].total}
+                                </Text>
+                              )}
+                              {isExcused && habitCompletion?.excuseReason && (
+                                <Text style={{ fontSize: 11, color: '#ff6b6b', marginTop: 2, fontStyle: 'italic' }}>
+                                  Excused: {habitCompletion.excuseReason}
+                                </Text>
+                              )}
                             </View>
                             {isCompleted && habitCompletion?.duration && (
                               <Text style={{ fontSize: 11, color: '#999999' }}>
@@ -720,11 +675,12 @@ export default function DashboardScreen() {
             {standaloneHabits.slice(0, 5).map((habit) => {
               const completion = dailyData?.habitCompletions?.[habit.id];
               const isCompleted = completion?.completed || false;
+              const isExcused = completion?.excused || false;
 
               return (
                 <TouchableOpacity
                   key={habit.id}
-                  onPress={() => handleToggleHabitCompletion(habit.id)}
+                  onPress={() => router.push(`/habit/${habit.id}`)}
                   style={{
                     backgroundColor: 'white',
                     borderRadius: 12,
@@ -736,28 +692,33 @@ export default function DashboardScreen() {
                     shadowRadius: 2,
                     elevation: 2,
                     borderLeftWidth: 3,
-                    borderLeftColor: isCompleted ? AGM_GREEN : '#e5e7eb',
+                    borderLeftColor: isCompleted ? AGM_GREEN : isExcused ? '#999999' : '#e5e7eb',
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 15, fontWeight: '600', color: AGM_DARK, marginBottom: 2 }}>
+                      <Text style={{ fontSize: 15, fontWeight: '600', color: AGM_DARK, marginBottom: 2, textDecorationLine: isExcused ? 'line-through' : 'none', color: isExcused ? '#999999' : AGM_DARK }}>
                         {habit.name}
                       </Text>
                       {habit.description && (
                         <Text style={{ fontSize: 13, color: '#666666', marginBottom: 8 }}>{habit.description}</Text>
                       )}
-                      {habitStreaks[habit.id] !== undefined && (
+                      {habitCompletionStats[habit.id] !== undefined && (
                         <Text style={{ fontSize: 12, fontWeight: '600', color: '#ff6b6b' }}>
-                          {habitStreaks[habit.id]} {habitStreaks[habit.id] === 1 ? 'day' : 'days'}
+                          {habitCompletionStats[habit.id].completed} completed in {habitCompletionStats[habit.id].total} {habitCompletionStats[habit.id].total === 1 ? 'day' : 'days'}
+                        </Text>
+                      )}
+                      {isExcused && completion?.excuseReason && (
+                        <Text style={{ fontSize: 11, color: '#ff6b6b', marginTop: 4, fontStyle: 'italic' }}>
+                          Excused: {completion.excuseReason}
                         </Text>
                       )}
                     </View>
                     <View style={{ alignItems: 'center' }}>
                       <MaterialCommunityIcons
-                        name={isCompleted ? 'check-circle' : 'circle-outline'}
+                        name={isCompleted ? 'check-circle' : isExcused ? 'minus-circle' : 'circle-outline'}
                         size={24}
-                        color={isCompleted ? AGM_GREEN : '#d1d5db'}
+                        color={isCompleted ? AGM_GREEN : isExcused ? '#999999' : '#d1d5db'}
                       />
                     </View>
                   </View>

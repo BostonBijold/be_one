@@ -49,6 +49,10 @@ export interface Habit {
   duration: number | null;
   expectedCompletionTime: number | null;
   createdAt: string;
+  excusable: boolean; // Whether this habit allows exceptions (sick days, etc.)
+  expectedDuration?: number; // User-set goal duration in milliseconds (default 10 min)
+  totalDurationSum?: number; // Sum of all completed durations for average calculation
+  completionCount?: number; // Count of completed habits (excluding excused)
 }
 
 export interface Virtue {
@@ -94,6 +98,8 @@ export interface HabitCompletion {
   startTime: string | null;
   endTime: string | null;
   notes: string;
+  excused?: boolean; // Whether this completion day was excused (sick day, etc.)
+  excuseReason?: string; // Reason for excusing (e.g., "Sick Day", "Travel", "Other")
 }
 
 export interface RoutineCompletion {
@@ -786,6 +792,48 @@ class DataService {
     return completion?.completed || false;
   }
 
+  // Calculate habit completion stats (completed days vs days with data)
+  async getHabitCompletionStats(habitId: number, daysToLookBack: number = 365): Promise<{ completed: number; total: number }> {
+    let completed = 0;
+    let total = 0;
+
+    const today = new Date();
+
+    // Create array of date strings for the past N days
+    const dateStrings: string[] = [];
+    for (let i = 0; i < daysToLookBack; i++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      dateStrings.push(this.formatDateString(date));
+    }
+
+    // Fetch all data at once to avoid 365+ individual calls
+    try {
+      const userData = await this.getCurrentUserData();
+      const dailyData = userData?.data?.dailyData || {};
+
+      // Count completions from the already-loaded daily data
+      for (const dateString of dateStrings) {
+        const dayData = dailyData[dateString];
+        if (dayData && dayData.habitCompletions) {
+          const habitCompletion = dayData.habitCompletions[habitId];
+
+          if (habitCompletion !== null && habitCompletion !== undefined) {
+            total++;
+            // Count completed days (not excused, actually completed)
+            if (habitCompletion.completed) {
+              completed++;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error getting habit completion stats:', error);
+    }
+
+    return { completed, total };
+  }
+
   async getUserSettings(): Promise<UserSettings> {
     const userData = await this.getCurrentUserData();
     return userData?.data?.settings || {};
@@ -1361,8 +1409,20 @@ class DataService {
       trackingType: habitData.trackingType || 'simple',
       duration: habitData.duration || null,
       expectedCompletionTime: habitData.expectedCompletionTime || null,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      excusable: habitData.excusable || false,
     };
+
+    // Only include optional fields if they're defined (Firebase doesn't allow undefined)
+    if (habitData.expectedDuration !== undefined) {
+      newHabit.expectedDuration = habitData.expectedDuration;
+    }
+    if (habitData.totalDurationSum !== undefined) {
+      newHabit.totalDurationSum = habitData.totalDurationSum;
+    }
+    if (habitData.completionCount !== undefined) {
+      newHabit.completionCount = habitData.completionCount;
+    }
 
     userData.data.habits.push(newHabit);
     await this.updateUserData(userData.data);
@@ -1376,9 +1436,17 @@ class DataService {
     const habitIndex = userData.data.habits.findIndex(h => h.id === habitId);
     if (habitIndex === -1) throw new Error('Habit not found');
 
+    // Filter out undefined values (Firebase doesn't allow undefined)
+    const filteredData: Partial<Habit> = {};
+    for (const [key, value] of Object.entries(habitData)) {
+      if (value !== undefined) {
+        filteredData[key as keyof Habit] = value;
+      }
+    }
+
     userData.data.habits[habitIndex] = {
       ...userData.data.habits[habitIndex],
-      ...habitData
+      ...filteredData
     };
 
     await this.updateUserData(userData.data);

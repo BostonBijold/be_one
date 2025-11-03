@@ -8,6 +8,7 @@ import {
   Modal,
   SafeAreaView,
   ScrollView,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -44,6 +45,7 @@ export default function RoutinesScreen() {
   const [saving, setSaving] = useState(false);
   const [newHabitName, setNewHabitName] = useState('');
   const [newHabitDescription, setNewHabitDescription] = useState('');
+  const [newHabitExcusable, setNewHabitExcusable] = useState(false);
   const [showNewHabitForm, setShowNewHabitForm] = useState(false);
 
   // Delete confirmation modal state
@@ -59,12 +61,16 @@ export default function RoutinesScreen() {
   const [showAddIndividualHabitModal, setShowAddIndividualHabitModal] = useState(false);
   const [individualHabitName, setIndividualHabitName] = useState('');
   const [individualHabitDescription, setIndividualHabitDescription] = useState('');
+  const [individualHabitDuration, setIndividualHabitDuration] = useState('10'); // in minutes
+  const [individualHabitExcusable, setIndividualHabitExcusable] = useState(false);
 
   // Edit Individual Habit modal state
   const [showEditIndividualHabitModal, setShowEditIndividualHabitModal] = useState(false);
   const [editingIndividualHabit, setEditingIndividualHabit] = useState<Habit | null>(null);
   const [editIndividualHabitName, setEditIndividualHabitName] = useState('');
   const [editIndividualHabitDescription, setEditIndividualHabitDescription] = useState('');
+  const [editIndividualHabitDuration, setEditIndividualHabitDuration] = useState('10'); // in minutes
+  const [editIndividualHabitExcusable, setEditIndividualHabitExcusable] = useState(false);
 
   // Delete confirmation modal state
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
@@ -250,6 +256,7 @@ export default function RoutinesScreen() {
     setEditingRoutine(null);
     setNewHabitName('');
     setNewHabitDescription('');
+    setNewHabitExcusable(false);
     setShowNewHabitForm(false);
   };
 
@@ -262,6 +269,9 @@ export default function RoutinesScreen() {
 
     try {
       setSaving(true);
+      // Convert duration from minutes to milliseconds
+      const durationMs = parseInt(individualHabitDuration) * 60 * 1000;
+
       await dataService.addSingleHabit({
         name: individualHabitName.trim(),
         description: individualHabitDescription.trim(),
@@ -269,6 +279,8 @@ export default function RoutinesScreen() {
         duration: null,
         expectedCompletionTime: null,
         routineId: null,
+        excusable: individualHabitExcusable,
+        expectedDuration: durationMs,
       });
 
       // Reload habits list
@@ -278,6 +290,8 @@ export default function RoutinesScreen() {
       // Reset and close modal
       setIndividualHabitName('');
       setIndividualHabitDescription('');
+      setIndividualHabitDuration('10');
+      setIndividualHabitExcusable(false);
       setShowAddIndividualHabitModal(false);
 
       Alert.alert('Success', 'Individual habit created!');
@@ -294,6 +308,10 @@ export default function RoutinesScreen() {
     setEditingIndividualHabit(habit);
     setEditIndividualHabitName(habit.name);
     setEditIndividualHabitDescription(habit.description || '');
+    // Convert duration from milliseconds back to minutes for display
+    const durationMinutes = habit.expectedDuration ? Math.round(habit.expectedDuration / 60 / 1000) : 10;
+    setEditIndividualHabitDuration(durationMinutes.toString());
+    setEditIndividualHabitExcusable(habit.excusable || false);
     setShowEditIndividualHabitModal(true);
   };
 
@@ -308,10 +326,15 @@ export default function RoutinesScreen() {
 
     try {
       setSaving(true);
+      // Convert duration from minutes to milliseconds
+      const durationMs = parseInt(editIndividualHabitDuration) * 60 * 1000;
+
       // Update the habit using the dataService
       await dataService.updateHabit(editingIndividualHabit.id, {
         name: editIndividualHabitName.trim(),
         description: editIndividualHabitDescription.trim(),
+        excusable: editIndividualHabitExcusable,
+        expectedDuration: durationMs,
       });
 
       // Reload habits list
@@ -322,6 +345,8 @@ export default function RoutinesScreen() {
       setEditingIndividualHabit(null);
       setEditIndividualHabitName('');
       setEditIndividualHabitDescription('');
+      setEditIndividualHabitDuration('10');
+      setEditIndividualHabitExcusable(false);
       setShowEditIndividualHabitModal(false);
 
       Alert.alert('Success', 'Individual habit updated!');
@@ -381,6 +406,7 @@ export default function RoutinesScreen() {
         duration: null,
         expectedCompletionTime: null,
         routineId: null,
+        excusable: newHabitExcusable,
       });
 
       // Add the new habit to selected habits and reload habits list
@@ -391,6 +417,7 @@ export default function RoutinesScreen() {
       // Reset new habit form
       setNewHabitName('');
       setNewHabitDescription('');
+      setNewHabitExcusable(false);
       setShowNewHabitForm(false);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to create habit');
@@ -885,6 +912,25 @@ export default function RoutinesScreen() {
                       onChangeText={setNewHabitDescription}
                       multiline
                     />
+
+                    {/* Excusable Toggle for New Habit */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, backgroundColor: '#ffffff', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 8 }}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: AGM_DARK }}>
+                          Allow Exceptions
+                        </Text>
+                        <Text style={{ fontSize: 11, color: '#666666', marginTop: 2 }}>
+                          Can skip if needed
+                        </Text>
+                      </View>
+                      <Switch
+                        value={newHabitExcusable}
+                        onValueChange={setNewHabitExcusable}
+                        trackColor={{ false: '#d1d5db', true: AGM_GREEN }}
+                        thumbColor={'white'}
+                      />
+                    </View>
+
                     <TouchableOpacity
                       onPress={handleAddNewHabit}
                       disabled={saving}
@@ -1059,26 +1105,24 @@ export default function RoutinesScreen() {
                 </View>
               ) : (
                 habits.map((habit) => {
-                  const isCompleted = habitCompletions[habit.id]?.completed || false;
                   const isRoutineHabit = habit.routineId !== null;
                   return (
                     <TouchableOpacity
                       key={habit.id}
-                      onPress={() => toggleHabitCompletion(habit.id)}
+                      onPress={() => {
+                        handleEditIndividualHabit(habit);
+                        setShowHabitsModal(false);
+                      }}
                       style={{ backgroundColor: '#ffffff', padding: 16, borderRadius: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}
                     >
-                      <MaterialCommunityIcons
-                        name={isCompleted ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
-                        size={32}
-                        color={isCompleted ? AGM_GREEN : '#999'}
-                        style={{ marginRight: 12 }}
-                      />
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 16, fontWeight: '600', color: AGM_DARK, textDecorationLine: isCompleted ? 'line-through' : 'none' }}>
+                        <Text style={{ fontSize: 16, fontWeight: '600', color: AGM_DARK }}>
                           {habit.name}
                         </Text>
+                        {habit.description && <Text style={{ fontSize: 13, color: '#666666', marginTop: 4 }}>{habit.description}</Text>}
                         {isRoutineHabit && <Text style={{ fontSize: 12, color: AGM_GREEN, marginTop: 4 }}>Part of routine</Text>}
                       </View>
+                      <MaterialCommunityIcons name="pencil" size={20} color={AGM_GREEN} style={{ marginLeft: 12 }} />
                     </TouchableOpacity>
                   );
                 })
@@ -1351,6 +1395,50 @@ export default function RoutinesScreen() {
               />
             </View>
 
+            {/* Expected Duration Input */}
+            <View style={{ marginBottom: 24 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: AGM_DARK, marginBottom: 8 }}>
+                Expected Duration (minutes)
+              </Text>
+              <Text style={{ fontSize: 12, color: '#666666', marginBottom: 8 }}>
+                Your goal time. Helps track if you're getting faster!
+              </Text>
+              <TextInput
+                style={{
+                  borderWidth: 1,
+                  borderColor: '#e5e7eb',
+                  borderRadius: 8,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  color: AGM_DARK,
+                  fontSize: 14,
+                }}
+                placeholder="10"
+                placeholderTextColor="#999999"
+                value={individualHabitDuration}
+                onChangeText={setIndividualHabitDuration}
+                keyboardType="number-pad"
+              />
+            </View>
+
+            {/* Excusable Toggle */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, backgroundColor: '#f9f9f9', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: AGM_DARK }}>
+                  Allow Exceptions
+                </Text>
+                <Text style={{ fontSize: 12, color: '#666666', marginTop: 4 }}>
+                  Can skip due to sick day, travel, etc.
+                </Text>
+              </View>
+              <Switch
+                value={individualHabitExcusable}
+                onValueChange={setIndividualHabitExcusable}
+                trackColor={{ false: '#d1d5db', true: AGM_GREEN }}
+                thumbColor={'white'}
+              />
+            </View>
+
             {/* Action Buttons */}
             <View style={{ flexDirection: 'row', gap: 12 }}>
               <TouchableOpacity
@@ -1358,6 +1446,8 @@ export default function RoutinesScreen() {
                   setShowAddIndividualHabitModal(false);
                   setIndividualHabitName('');
                   setIndividualHabitDescription('');
+                  setIndividualHabitDuration('10');
+                  setIndividualHabitExcusable(false);
                 }}
                 style={{
                   flex: 1,
@@ -1401,6 +1491,7 @@ export default function RoutinesScreen() {
           setEditingIndividualHabit(null);
           setEditIndividualHabitName('');
           setEditIndividualHabitDescription('');
+          setEditIndividualHabitDuration('10');
         }}
       >
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
@@ -1425,6 +1516,8 @@ export default function RoutinesScreen() {
                   setEditingIndividualHabit(null);
                   setEditIndividualHabitName('');
                   setEditIndividualHabitDescription('');
+                  setEditIndividualHabitDuration('10');
+                  setEditIndividualHabitExcusable(false);
                 }}
               >
                 <MaterialCommunityIcons name="close" size={24} color={AGM_DARK} />
@@ -1479,6 +1572,50 @@ export default function RoutinesScreen() {
               />
             </View>
 
+            {/* Expected Duration Input */}
+            <View style={{ marginBottom: 24 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: AGM_DARK, marginBottom: 8 }}>
+                Expected Duration (minutes)
+              </Text>
+              <Text style={{ fontSize: 12, color: '#666666', marginBottom: 8 }}>
+                Your goal time. Helps track if you're getting faster!
+              </Text>
+              <TextInput
+                style={{
+                  borderWidth: 1,
+                  borderColor: '#e5e7eb',
+                  borderRadius: 8,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  color: AGM_DARK,
+                  fontSize: 14,
+                }}
+                placeholder="10"
+                placeholderTextColor="#999999"
+                value={editIndividualHabitDuration}
+                onChangeText={setEditIndividualHabitDuration}
+                keyboardType="number-pad"
+              />
+            </View>
+
+            {/* Excusable Toggle */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, backgroundColor: '#f9f9f9', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: AGM_DARK }}>
+                  Allow Exceptions
+                </Text>
+                <Text style={{ fontSize: 12, color: '#666666', marginTop: 4 }}>
+                  Can skip due to sick day, travel, etc.
+                </Text>
+              </View>
+              <Switch
+                value={editIndividualHabitExcusable}
+                onValueChange={setEditIndividualHabitExcusable}
+                trackColor={{ false: '#d1d5db', true: AGM_GREEN }}
+                thumbColor={'white'}
+              />
+            </View>
+
             {/* Delete Button */}
             <TouchableOpacity
               onPress={() => {
@@ -1509,6 +1646,8 @@ export default function RoutinesScreen() {
                   setEditingIndividualHabit(null);
                   setEditIndividualHabitName('');
                   setEditIndividualHabitDescription('');
+                  setEditIndividualHabitDuration('10');
+                  setEditIndividualHabitExcusable(false);
                 }}
                 style={{
                   flex: 1,

@@ -1,5 +1,6 @@
 import { useAuth } from '@/hooks/useAuth';
 import dataService, { Challenge, Virtue } from '@/services/dataService';
+import { createTestData, deleteTestData } from '@/services/testDataSetup';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
@@ -40,6 +41,8 @@ export default function AdminScreen() {
     challenge: '',
     difficulty: 'Medium',
   });
+  const [creatingTestData, setCreatingTestData] = useState(false);
+  const [deletingTestData, setDeletingTestData] = useState(false);
 
   // Load data
   useEffect(() => {
@@ -228,6 +231,47 @@ export default function AdminScreen() {
     );
   };
 
+  // Handle creating test data
+  const handleCreateTestData = async () => {
+    try {
+      setCreatingTestData(true);
+      await createTestData();
+      Alert.alert('Success', 'Test data created! Check the dashboard to see 3 test habits with a week of data.');
+    } catch (err: any) {
+      console.error('Error creating test data:', err);
+      Alert.alert('Error', err.message || 'Failed to create test data');
+    } finally {
+      setCreatingTestData(false);
+    }
+  };
+
+  // Handle deleting test data
+  const handleDeleteTestData = () => {
+    Alert.alert(
+      'Delete Test Data',
+      'Are you sure you want to delete the test habits (Morning Walk, Read, Meditate)? This cannot be undone.',
+      [
+        { text: 'Cancel', onPress: () => {} },
+        {
+          text: 'Delete',
+          onPress: async () => {
+            try {
+              setDeletingTestData(true);
+              await deleteTestData();
+              Alert.alert('Success', 'Test data deleted!');
+            } catch (err: any) {
+              console.error('Error deleting test data:', err);
+              Alert.alert('Error', err.message || 'Failed to delete test data');
+            } finally {
+              setDeletingTestData(false);
+            }
+          },
+          style: 'destructive',
+        },
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: AGM_STONE }}>
@@ -298,6 +342,84 @@ export default function AdminScreen() {
                 </Text>
               </View>
             )}
+          </View>
+        </View>
+
+        {/* Debug/Testing Section */}
+        <View style={{ paddingHorizontal: 16, paddingTop: 24, marginBottom: 24 }}>
+          <View
+            style={{
+              backgroundColor: '#fff3cd',
+              borderRadius: 12,
+              padding: 16,
+              borderLeftWidth: 4,
+              borderLeftColor: '#f59e0b',
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <MaterialCommunityIcons name="bug" size={24} color="#f59e0b" style={{ marginRight: 12 }} />
+              <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#92400e' }}>
+                Debug / Testing
+              </Text>
+            </View>
+            <Text style={{ fontSize: 13, color: '#92400e', marginBottom: 12, lineHeight: 18 }}>
+              Create test data with 3 habits and a week of sample completions to see all features in action.
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity
+                onPress={handleCreateTestData}
+                disabled={creatingTestData || deletingTestData}
+                style={{
+                  flex: 1,
+                  backgroundColor: creatingTestData || deletingTestData ? '#ccc' : '#f59e0b',
+                  borderRadius: 8,
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  alignItems: 'center',
+                  opacity: creatingTestData || deletingTestData ? 0.6 : 1,
+                }}
+              >
+                {creatingTestData ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <ActivityIndicator size="small" color="white" style={{ marginRight: 8 }} />
+                    <Text style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>
+                      Creating...
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>
+                    Create Test Data
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleDeleteTestData}
+                disabled={deletingTestData || creatingTestData}
+                style={{
+                  flex: 1,
+                  backgroundColor: deletingTestData || creatingTestData ? '#ccc' : '#dc2626',
+                  borderRadius: 8,
+                  paddingVertical: 12,
+                  paddingHorizontal: 16,
+                  alignItems: 'center',
+                  opacity: deletingTestData || creatingTestData ? 0.6 : 1,
+                }}
+              >
+                {deletingTestData ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <ActivityIndicator size="small" color="white" style={{ marginRight: 8 }} />
+                    <Text style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>
+                      Deleting...
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>
+                    Delete Test Data
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 

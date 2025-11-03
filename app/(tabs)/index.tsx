@@ -771,7 +771,7 @@ export default function DashboardScreen() {
                                         left: `${averagePercentage}%`,
                                         width: 2,
                                         height: 60,
-                                        backgroundColor: '#ef4444',
+                                        backgroundColor: '#9ca3af',
                                         borderRadius: 1,
                                       }}
                                     />
@@ -783,22 +783,30 @@ export default function DashboardScreen() {
                                   style={{
                                     marginBottom: 12,
                                     paddingHorizontal: 12,
-                                    paddingVertical: 6,
+                                    paddingVertical: 8,
                                     borderRadius: 6,
-                                    backgroundColor: isAheadOfAverage ? '#f0f9f0' : '#fff5f5',
+                                    backgroundColor: '#f3f4f6',
+                                    flexDirection: 'row',
                                     alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 6,
                                   }}
                                 >
+                                  <MaterialCommunityIcons
+                                    name={isAheadOfAverage ? 'chevron-up' : 'chevron-down'}
+                                    size={18}
+                                    color={AGM_DARK}
+                                  />
                                   <Text
                                     style={{
                                       fontSize: 12,
                                       fontWeight: '600',
-                                      color: isAheadOfAverage ? AGM_GREEN : '#ef4444',
+                                      color: AGM_DARK,
                                     }}
                                   >
                                     {isAheadOfAverage
-                                      ? `+${formatTime(totalSeconds - averageTotal)} over average`
-                                      : `${formatTime(averageTotal - totalSeconds)} under average`}
+                                      ? `+${formatTime(totalSeconds - averageTotal)} vs average`
+                                      : `${formatTime(averageTotal - totalSeconds)} faster`}
                                   </Text>
                                 </View>
 

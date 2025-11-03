@@ -48,7 +48,7 @@ export default function RoutineDetailScreen() {
   ]);
 
   // Completion screen state
-  const [showCompletionScreen, setShowCompletionScreen] = useState(false);
+  const [isRoutineComplete, setIsRoutineComplete] = useState(false);
 
   const todayString = dataService.getTodayString();
 
@@ -136,6 +136,176 @@ export default function RoutineDetailScreen() {
           <ActivityIndicator size="large" color={AGM_GREEN} />
           <Text style={{ marginTop: 16, color: AGM_DARK }}>Loading routine...</Text>
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Show completion page when routine is complete
+  if (isRoutineComplete && routine && dailyData) {
+    const routineCompletion = dailyData.routineCompletions?.[routine.id];
+    const { composition, totalSeconds } = getRoutineCompositionData(routine, routineCompletion);
+
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: AGM_STONE }}>
+        <ScrollView
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 24,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: 'white',
+              borderRadius: 20,
+              padding: 32,
+              width: '100%',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.15,
+              shadowRadius: 12,
+              elevation: 8,
+            }}
+          >
+            {/* Success Icon and Message */}
+            <View style={{ alignItems: 'center', marginBottom: 32 }}>
+              <View
+                style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: 40,
+                  backgroundColor: '#d1fae5',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  marginBottom: 16,
+                }}
+              >
+                <MaterialCommunityIcons name="check-circle" size={48} color={AGM_GREEN} />
+              </View>
+              <Text style={{ fontSize: 24, fontWeight: 'bold', color: AGM_DARK, marginBottom: 8 }}>
+                Routine Complete! 🎉
+              </Text>
+              <Text style={{ fontSize: 14, color: '#666', textAlign: 'center' }}>
+                Great work completing your {routine?.name}
+              </Text>
+            </View>
+
+            {/* Routine Graph */}
+            {composition.length > 0 && (
+              <View style={{ marginBottom: 32 }}>
+                {/* Total Time Display */}
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>
+                    Total Routine Time
+                  </Text>
+                  <Text style={{ fontSize: 36, fontWeight: 'bold', color: AGM_GREEN, marginBottom: 4 }}>
+                    {formatTime(totalSeconds)}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#999' }}>
+                    {(totalSeconds / 60).toFixed(1)} minutes
+                  </Text>
+                </View>
+
+                {/* Stacked Bar Chart */}
+                <View style={{ marginBottom: 20 }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      height: 60,
+                      borderRadius: 8,
+                      overflow: 'hidden',
+                      backgroundColor: '#f0f0f0',
+                      marginBottom: 12,
+                    }}
+                  >
+                    {composition.map((item) => {
+                      const percentage = totalSeconds > 0 ? (item.durationSeconds / totalSeconds) * 100 : 0;
+
+                      return (
+                        <View
+                          key={item.habit.id}
+                          style={{
+                            flex: percentage,
+                            backgroundColor: item.color,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            paddingHorizontal: 4,
+                          }}
+                        >
+                          {percentage > 12 && (
+                            <Text
+                              style={{
+                                fontSize: 10,
+                                fontWeight: '600',
+                                color: 'white',
+                                textAlign: 'center',
+                              }}
+                              numberOfLines={1}
+                            >
+                              {formatTime(item.durationSeconds)}
+                            </Text>
+                          )}
+                        </View>
+                      );
+                    })}
+                  </View>
+
+                  {/* Habit Breakdown */}
+                  <View>
+                    {composition.map((item) => (
+                      <View
+                        key={item.habit.id}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          marginBottom: 8,
+                          paddingBottom: 8,
+                          borderBottomWidth: 1,
+                          borderBottomColor: '#f0f0f0',
+                        }}
+                      >
+                        <View
+                          style={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: 2,
+                            backgroundColor: item.color,
+                            marginRight: 12,
+                          }}
+                        />
+                        <Text style={{ fontSize: 14, color: AGM_DARK, flex: 1 }}>
+                          {item.habit.name}
+                        </Text>
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: AGM_DARK }}>
+                          {formatTime(item.durationSeconds)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Done Button */}
+            <TouchableOpacity
+              onPress={() => {
+                router.back();
+              }}
+              style={{
+                backgroundColor: AGM_GREEN,
+                borderRadius: 12,
+                paddingVertical: 14,
+                alignItems: 'center',
+                marginTop: 16,
+              }}
+            >
+              <Text style={{ color: 'white', fontWeight: '600', fontSize: 16 }}>
+                Done
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -315,7 +485,7 @@ export default function RoutineDetailScreen() {
         }
 
         console.log('Routine complete! Showing completion screen');
-        setShowCompletionScreen(true);
+        setIsRoutineComplete(true);
       }
     } catch (err: any) {
       Alert.alert('Error', 'Failed to save habit completion');
@@ -860,185 +1030,6 @@ export default function RoutineDetailScreen() {
             </View>
           </View>
         </View>
-      </Modal>
-
-      {/* Routine Completion Summary Screen */}
-      <Modal
-        visible={showCompletionScreen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowCompletionScreen(false)}
-      >
-        <SafeAreaView style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <ScrollView
-            contentContainerStyle={{
-              flexGrow: 1,
-              justifyContent: 'center',
-              alignItems: 'center',
-              padding: 24,
-            }}
-          >
-            <View
-              style={{
-                backgroundColor: 'white',
-                borderRadius: 20,
-                padding: 32,
-                width: '100%',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 12,
-                elevation: 8,
-              }}
-            >
-              {/* Success Icon and Message */}
-              <View style={{ alignItems: 'center', marginBottom: 32 }}>
-                <View
-                  style={{
-                    width: 80,
-                    height: 80,
-                    borderRadius: 40,
-                    backgroundColor: '#d1fae5',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    marginBottom: 16,
-                  }}
-                >
-                  <MaterialCommunityIcons name="check-circle" size={48} color={AGM_GREEN} />
-                </View>
-                <Text style={{ fontSize: 24, fontWeight: 'bold', color: AGM_DARK, marginBottom: 8 }}>
-                  Routine Complete! 🎉
-                </Text>
-                <Text style={{ fontSize: 14, color: '#666', textAlign: 'center' }}>
-                  Great work completing your {routine?.name}
-                </Text>
-              </View>
-
-              {/* Routine Graph */}
-              {dailyData && routine && (() => {
-                const routineCompletion = dailyData.routineCompletions?.[routine.id];
-                if (!routineCompletion) return null;
-
-                const { composition, totalSeconds } = getRoutineCompositionData(routine, routineCompletion);
-                if (composition.length === 0) return null;
-
-                return (
-                  <View style={{ marginBottom: 32 }}>
-                    {/* Total Time Display */}
-                    <View style={{ marginBottom: 20 }}>
-                      <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>
-                        Total Routine Time
-                      </Text>
-                      <Text style={{ fontSize: 36, fontWeight: 'bold', color: AGM_GREEN, marginBottom: 4 }}>
-                        {formatTime(totalSeconds)}
-                      </Text>
-                      <Text style={{ fontSize: 12, color: '#999' }}>
-                        {(totalSeconds / 60).toFixed(1)} minutes
-                      </Text>
-                    </View>
-
-                    {/* Stacked Bar Chart */}
-                    <View style={{ marginBottom: 20 }}>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          height: 60,
-                          borderRadius: 8,
-                          overflow: 'hidden',
-                          backgroundColor: '#f0f0f0',
-                          marginBottom: 12,
-                        }}
-                      >
-                        {composition.map((item) => {
-                          const percentage = totalSeconds > 0 ? (item.durationSeconds / totalSeconds) * 100 : 0;
-
-                          return (
-                            <View
-                              key={item.habit.id}
-                              style={{
-                                flex: percentage,
-                                backgroundColor: item.color,
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                paddingHorizontal: 4,
-                              }}
-                            >
-                              {percentage > 12 && (
-                                <Text
-                                  style={{
-                                    fontSize: 10,
-                                    fontWeight: '600',
-                                    color: 'white',
-                                    textAlign: 'center',
-                                  }}
-                                  numberOfLines={1}
-                                >
-                                  {formatTime(item.durationSeconds)}
-                                </Text>
-                              )}
-                            </View>
-                          );
-                        })}
-                      </View>
-
-                      {/* Habit Breakdown */}
-                      <View>
-                        {composition.map((item) => (
-                          <View
-                            key={item.habit.id}
-                            style={{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              marginBottom: 8,
-                              paddingBottom: 8,
-                              borderBottomWidth: 1,
-                              borderBottomColor: '#f0f0f0',
-                            }}
-                          >
-                            <View
-                              style={{
-                                width: 12,
-                                height: 12,
-                                borderRadius: 2,
-                                backgroundColor: item.color,
-                                marginRight: 12,
-                              }}
-                            />
-                            <Text style={{ fontSize: 14, color: AGM_DARK, flex: 1 }}>
-                              {item.habit.name}
-                            </Text>
-                            <Text style={{ fontSize: 14, fontWeight: '600', color: AGM_DARK }}>
-                              {formatTime(item.durationSeconds)}
-                            </Text>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  </View>
-                );
-              })()}
-
-              {/* Close Button */}
-              <TouchableOpacity
-                onPress={() => {
-                  setShowCompletionScreen(false);
-                  router.back();
-                }}
-                style={{
-                  backgroundColor: AGM_GREEN,
-                  borderRadius: 12,
-                  paddingVertical: 14,
-                  alignItems: 'center',
-                  marginTop: 16,
-                }}
-              >
-                <Text style={{ color: 'white', fontWeight: '600', fontSize: 16 }}>
-                  Done
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );

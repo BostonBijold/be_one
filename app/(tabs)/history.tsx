@@ -153,7 +153,7 @@ export default function HistoryScreen() {
   // Get routine composition data for stacked bar
   const getRoutineCompositionData = (routine: Routine, routineCompletion: any) => {
     if (!routineCompletion || !routineCompletion.habitTimes) {
-      return [];
+      return { composition: [], totalSeconds: 0 };
     }
 
     const routineHabits = getRoutineHabits(routine.habits);

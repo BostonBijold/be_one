@@ -47,6 +47,9 @@ export default function RoutineDetailScreen() {
     'Weather',
   ]);
 
+  // Completion screen state
+  const [showCompletionScreen, setShowCompletionScreen] = useState(false);
+
   const todayString = dataService.getTodayString();
 
   // Load routine, habits, and daily data
@@ -125,6 +128,45 @@ export default function RoutineDetailScreen() {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
+
+  // Helper function to format seconds to MM:SS
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Get habits for a routine
+  const getRoutineHabits = (routineHabitIds: number[]): Habit[] => {
+    return habits.filter(h => routineHabitIds.includes(h.id));
+  };
+
+  // Get routine composition data for stacked bar
+  const getRoutineCompositionData = (routine: Routine, routineCompletion: any) => {
+    if (!routineCompletion || !routineCompletion.habitTimes) {
+      return { composition: [], totalSeconds: 0 };
+    }
+
+    const routineHabits = getRoutineHabits(routine.habits);
+    const colors = ['#4b5320', '#8b7355', '#5a8a6b', '#a89b6f', '#6b8f9a', '#9b7b8f', '#8a7b6b'];
+
+    const composition = routineHabits.map((habit, index) => {
+      const habitTiming = routineCompletion.habitTimes[habit.id];
+      const durationSeconds = habitTiming
+        ? Math.round((habitTiming.duration || 0) / 1000)
+        : 0;
+
+      return {
+        habit,
+        durationSeconds,
+        color: colors[index % colors.length],
+      };
+    });
+
+    const totalSeconds = composition.reduce((sum, c) => sum + c.durationSeconds, 0);
+
+    return { composition, totalSeconds };
+  };
 
   if (loading) {
     return (
@@ -279,13 +321,8 @@ export default function RoutineDetailScreen() {
           });
         }
 
-        console.log('Routine complete! Showing alert and returning to home');
-        Alert.alert('Congratulations!', 'You have completed all habits in this routine!', [
-          { text: 'OK', onPress: () => {
-            console.log('Alert dismissed, navigating back');
-            router.back();
-          }},
-        ]);
+        console.log('Routine complete! Showing completion screen');
+        setShowCompletionScreen(true);
       }
     } catch (err: any) {
       Alert.alert('Error', 'Failed to save habit completion');
@@ -830,6 +867,185 @@ export default function RoutineDetailScreen() {
             </View>
           </View>
         </View>
+      </Modal>
+
+      {/* Routine Completion Summary Screen */}
+      <Modal
+        visible={showCompletionScreen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCompletionScreen(false)}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <ScrollView
+            contentContainerStyle={{
+              flexGrow: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+              padding: 24,
+            }}
+          >
+            <View
+              style={{
+                backgroundColor: 'white',
+                borderRadius: 20,
+                padding: 32,
+                width: '100%',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.15,
+                shadowRadius: 12,
+                elevation: 8,
+              }}
+            >
+              {/* Success Icon and Message */}
+              <View style={{ alignItems: 'center', marginBottom: 32 }}>
+                <View
+                  style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: 40,
+                    backgroundColor: '#d1fae5',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginBottom: 16,
+                  }}
+                >
+                  <MaterialCommunityIcons name="check-circle" size={48} color={AGM_GREEN} />
+                </View>
+                <Text style={{ fontSize: 24, fontWeight: 'bold', color: AGM_DARK, marginBottom: 8 }}>
+                  Routine Complete! 🎉
+                </Text>
+                <Text style={{ fontSize: 14, color: '#666', textAlign: 'center' }}>
+                  Great work completing your {routine?.name}
+                </Text>
+              </View>
+
+              {/* Routine Graph */}
+              {dailyData && routine && (() => {
+                const routineCompletion = dailyData.routineCompletions?.[routine.id];
+                if (!routineCompletion) return null;
+
+                const { composition, totalSeconds } = getRoutineCompositionData(routine, routineCompletion);
+                if (composition.length === 0) return null;
+
+                return (
+                  <View style={{ marginBottom: 32 }}>
+                    {/* Total Time Display */}
+                    <View style={{ marginBottom: 20 }}>
+                      <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>
+                        Total Routine Time
+                      </Text>
+                      <Text style={{ fontSize: 36, fontWeight: 'bold', color: AGM_GREEN, marginBottom: 4 }}>
+                        {formatTime(totalSeconds)}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: '#999' }}>
+                        {(totalSeconds / 60).toFixed(1)} minutes
+                      </Text>
+                    </View>
+
+                    {/* Stacked Bar Chart */}
+                    <View style={{ marginBottom: 20 }}>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          height: 60,
+                          borderRadius: 8,
+                          overflow: 'hidden',
+                          backgroundColor: '#f0f0f0',
+                          marginBottom: 12,
+                        }}
+                      >
+                        {composition.map((item) => {
+                          const percentage = totalSeconds > 0 ? (item.durationSeconds / totalSeconds) * 100 : 0;
+
+                          return (
+                            <View
+                              key={item.habit.id}
+                              style={{
+                                flex: percentage,
+                                backgroundColor: item.color,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                paddingHorizontal: 4,
+                              }}
+                            >
+                              {percentage > 12 && (
+                                <Text
+                                  style={{
+                                    fontSize: 10,
+                                    fontWeight: '600',
+                                    color: 'white',
+                                    textAlign: 'center',
+                                  }}
+                                  numberOfLines={1}
+                                >
+                                  {formatTime(item.durationSeconds)}
+                                </Text>
+                              )}
+                            </View>
+                          );
+                        })}
+                      </View>
+
+                      {/* Habit Breakdown */}
+                      <View>
+                        {composition.map((item) => (
+                          <View
+                            key={item.habit.id}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              marginBottom: 8,
+                              paddingBottom: 8,
+                              borderBottomWidth: 1,
+                              borderBottomColor: '#f0f0f0',
+                            }}
+                          >
+                            <View
+                              style={{
+                                width: 12,
+                                height: 12,
+                                borderRadius: 2,
+                                backgroundColor: item.color,
+                                marginRight: 12,
+                              }}
+                            />
+                            <Text style={{ fontSize: 14, color: AGM_DARK, flex: 1 }}>
+                              {item.habit.name}
+                            </Text>
+                            <Text style={{ fontSize: 14, fontWeight: '600', color: AGM_DARK }}>
+                              {formatTime(item.durationSeconds)}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  </View>
+                );
+              })()}
+
+              {/* Close Button */}
+              <TouchableOpacity
+                onPress={() => {
+                  setShowCompletionScreen(false);
+                  router.back();
+                }}
+                style={{
+                  backgroundColor: AGM_GREEN,
+                  borderRadius: 12,
+                  paddingVertical: 14,
+                  alignItems: 'center',
+                  marginTop: 16,
+                }}
+              >
+                <Text style={{ color: 'white', fontWeight: '600', fontSize: 16 }}>
+                  Done
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );

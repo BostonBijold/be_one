@@ -596,7 +596,7 @@ export default function RoutinesScreen() {
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <View>
               <Text style={{ color: AGM_DARK, fontSize: 28, fontWeight: 'bold', marginBottom: 4 }}>Routines</Text>
-              <Text style={{ color: '#999999', fontSize: 14 }}>{routines.length} routines</Text>
+              <Text style={{ color: '#666666', fontSize: 14 }}>{routines.length} routines</Text>
             </View>
             <TouchableOpacity
               onPress={() => {
@@ -668,7 +668,7 @@ export default function RoutinesScreen() {
                           {routine.name}
                         </Text>
                         {routine.completionCount && routine.completionCount > 0 && routine.totalDurationSum && (
-                          <Text style={{ fontSize: 13, color: '#999999', marginLeft: 8 }}>
+                          <Text style={{ fontSize: 13, color: '#666666', marginLeft: 8 }}>
                             (avg. {formatDuration(routine.totalDurationSum / routine.completionCount)})
                           </Text>
                         )}
@@ -677,7 +677,7 @@ export default function RoutinesScreen() {
                         {routine.days.map(d => getDayLabel(d)).join(', ')}
                       </Text>
                       {routineHabits.length > 0 && (
-                        <Text style={{ fontSize: 12, color: '#999999', marginTop: 4 }}>
+                        <Text style={{ fontSize: 12, color: '#666666', marginTop: 4 }}>
                           {routineHabits.length} {routineHabits.length === 1 ? 'habit' : 'habits'}
                         </Text>
                       )}
@@ -706,7 +706,7 @@ export default function RoutinesScreen() {
                           ))}
                         </View>
                       ) : (
-                        <Text style={{ fontSize: 13, color: '#999999', marginBottom: 12, fontStyle: 'italic' }}>No habits in this routine</Text>
+                        <Text style={{ fontSize: 13, color: '#666666', marginBottom: 12, fontStyle: 'italic' }}>No habits in this routine</Text>
                       )}
 
                       {/* Edit and Report Buttons */}
@@ -822,7 +822,7 @@ export default function RoutinesScreen() {
               ))}
             </>
             ) : (
-              <Text style={{ fontSize: 13, color: '#999999', fontStyle: 'italic' }}>
+              <Text style={{ fontSize: 13, color: '#666666', fontStyle: 'italic' }}>
                 No individual habits yet. Tap "Add" to create one.
               </Text>
             )}
@@ -960,7 +960,7 @@ export default function RoutinesScreen() {
                         <Text style={{ fontSize: 13, fontWeight: '600', color: AGM_DARK }}>
                           Allow Exceptions
                         </Text>
-                        <Text style={{ fontSize: 11, color: '#666666', marginTop: 2 }}>
+                        <Text style={{ fontSize: 12, color: '#666666', marginTop: 2 }}>
                           Can skip if needed
                         </Text>
                       </View>
@@ -1035,7 +1035,7 @@ export default function RoutinesScreen() {
                               {habit.name}
                             </Text>
                             {habit.description && (
-                              <Text style={{ fontSize: 11, color: '#666666', marginTop: 2 }}>
+                              <Text style={{ fontSize: 12, color: '#666666', marginTop: 2 }}>
                                 {habit.description}
                               </Text>
                             )}
@@ -1141,8 +1141,8 @@ export default function RoutinesScreen() {
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
               {habits.length === 0 ? (
                 <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-                  <MaterialCommunityIcons name="checkbox-marked-circle-outline" size={56} color="#999" />
-                  <Text style={{ fontSize: 14, color: '#999', marginTop: 12, textAlign: 'center' }}>No habits yet</Text>
+                  <MaterialCommunityIcons name="checkbox-marked-circle-outline" size={56} color="#666666" />
+                  <Text style={{ fontSize: 14, color: '#666666', marginTop: 12, textAlign: 'center' }}>No habits yet</Text>
                 </View>
               ) : (
                 habits.map((habit) => {
@@ -1198,7 +1198,7 @@ export default function RoutinesScreen() {
                 }}
                 style={{ flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 3, borderBottomColor: historyViewType === viewType ? AGM_GREEN : 'transparent' }}
               >
-                <Text style={{ fontWeight: '600', color: historyViewType === viewType ? AGM_GREEN : '#999', fontSize: 14, textTransform: 'capitalize' }}>
+                <Text style={{ fontWeight: '600', color: historyViewType === viewType ? AGM_GREEN : '#666666', fontSize: 14, textTransform: 'capitalize' }}>
                   {viewType}
                 </Text>
               </TouchableOpacity>
@@ -1248,7 +1248,7 @@ export default function RoutinesScreen() {
                             <MaterialCommunityIcons
                               name={completion.completed ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
                               size={28}
-                              color={completion.completed ? AGM_GREEN : '#999'}
+                              color={completion.completed ? AGM_GREEN : '#666666'}
                               style={{ marginRight: 12 }}
                             />
                             <View style={{ flex: 1 }}>
@@ -1259,7 +1259,7 @@ export default function RoutinesScreen() {
                                 {completion.completedAt ? new Date(completion.completedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : 'Not completed'}
                               </Text>
                             </View>
-                            <MaterialCommunityIcons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={20} color="#999" />
+                            <MaterialCommunityIcons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={20} color="#666666" />
                           </TouchableOpacity>
 
                           {isExpanded && routineHabits.length > 0 && (
@@ -1272,7 +1272,7 @@ export default function RoutinesScreen() {
                                     <MaterialCommunityIcons
                                       name={habitCompletion?.completed ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
                                       size={20}
-                                      color={habitCompletion?.completed ? AGM_GREEN : '#999'}
+                                      color={habitCompletion?.completed ? AGM_GREEN : '#666666'}
                                       style={{ marginRight: 10 }}
                                     />
                                     <View style={{ flex: 1 }}>
@@ -1280,7 +1280,7 @@ export default function RoutinesScreen() {
                                         {habit.name}
                                       </Text>
                                       {habitTiming && (
-                                        <Text style={{ fontSize: 11, color: '#666', marginTop: 2 }}>
+                                        <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
                                           Duration: {habitTiming.duration ? Math.floor(habitTiming.duration / 1000) + 's' : 'N/A'}
                                         </Text>
                                       )}
@@ -1311,7 +1311,7 @@ export default function RoutinesScreen() {
                           <Text style={{ fontSize: 14, fontWeight: '600', color: AGM_DARK }}>
                             {dayDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                           </Text>
-                          <Text style={{ fontSize: 12, color: completedRoutines === totalRoutines && totalRoutines > 0 ? AGM_GREEN : '#999' }}>
+                          <Text style={{ fontSize: 12, color: completedRoutines === totalRoutines && totalRoutines > 0 ? AGM_GREEN : '#666666' }}>
                             {completedRoutines}/{totalRoutines} routines
                           </Text>
                         </View>
@@ -1666,7 +1666,7 @@ export default function RoutinesScreen() {
                 }
               }}
               style={{
-                backgroundColor: '#ff6b6b',
+                backgroundColor: '#d32f2f',
                 borderRadius: 8,
                 paddingVertical: 12,
                 alignItems: 'center',
@@ -1773,7 +1773,7 @@ export default function RoutinesScreen() {
                 disabled={saving}
                 style={{
                   flex: 1,
-                  backgroundColor: '#ff6b6b',
+                  backgroundColor: '#d32f2f',
                   borderRadius: 8,
                   paddingVertical: 12,
                   alignItems: 'center',

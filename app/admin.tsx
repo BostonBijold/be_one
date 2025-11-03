@@ -340,7 +340,7 @@ export default function AdminScreen() {
                 <Text style={{ fontSize: 24, fontWeight: 'bold', color: AGM_DARK, marginBottom: 12 }}>
                   {weeklyVirtue}
                 </Text>
-                <Text style={{ fontSize: 13, color: '#999999', fontStyle: 'italic' }}>
+                <Text style={{ fontSize: 13, color: '#666666', fontStyle: 'italic' }}>
                   Changes automatically each week based on your virtue list.
                 </Text>
               </>
@@ -558,7 +558,7 @@ export default function AdminScreen() {
                         {virtue.shortDescription}
                       </Text>
                       {virtue.fullDescription && (
-                        <Text style={{ fontSize: 11, color: '#999999', fontStyle: 'italic', lineHeight: 16 }}>
+                        <Text style={{ fontSize: 12, color: '#666666', fontStyle: 'italic', lineHeight: 16 }}>
                           {virtue.fullDescription.substring(0, 80)}...
                         </Text>
                       )}

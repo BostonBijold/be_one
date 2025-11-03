@@ -596,10 +596,10 @@ export default function DashboardScreen() {
                       {composition.map((item) => (
                         <View key={item.habit.id} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4, paddingHorizontal: 4 }}>
                           <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: item.color, marginRight: 8 }} />
-                          <Text style={{ fontSize: 11, color: AGM_DARK, flex: 1 }}>
+                          <Text style={{ fontSize: 12, color: AGM_DARK, flex: 1 }}>
                             {item.habit.name}
                           </Text>
-                          <Text style={{ fontSize: 11, color: '#666666' }}>
+                          <Text style={{ fontSize: 12, color: '#666666' }}>
                             {formatTime(item.durationSeconds)}
                           </Text>
                         </View>
@@ -883,7 +883,7 @@ export default function DashboardScreen() {
                             {routine.name}
                           </Text>
                           {routine.completionCount && routine.completionCount > 0 && routine.totalDurationSum && (
-                            <Text style={{ fontSize: 12, color: '#999999', marginLeft: 8 }}>
+                            <Text style={{ fontSize: 12, color: '#666666', marginLeft: 8 }}>
                               (avg. {formatDuration(routine.totalDurationSum / routine.completionCount)})
                             </Text>
                           )}
@@ -935,11 +935,11 @@ export default function DashboardScreen() {
                                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
                                   <View>
                                     <Text style={{ fontSize: 12, fontWeight: '600', color: AGM_DARK }}>Today</Text>
-                                    <Text style={{ fontSize: 11, color: '#666' }}>{formatTime(totalSeconds)}</Text>
+                                    <Text style={{ fontSize: 12, color: '#666' }}>{formatTime(totalSeconds)}</Text>
                                   </View>
                                   <View style={{ alignItems: 'flex-end' }}>
                                     <Text style={{ fontSize: 12, fontWeight: '600', color: '#666' }}>7-Day Avg</Text>
-                                    <Text style={{ fontSize: 11, color: '#999' }}>{formatTime(averageTotal)}</Text>
+                                    <Text style={{ fontSize: 12, color: '#666666' }}>{formatTime(averageTotal)}</Text>
                                   </View>
                                 </View>
 
@@ -1087,7 +1087,7 @@ export default function DashboardScreen() {
                                 <MaterialCommunityIcons
                                   name={isCompleted ? 'check-circle' : isExcused ? 'minus-circle' : 'circle-outline'}
                                   size={20}
-                                  color={isCompleted ? AGM_GREEN : isExcused ? '#999999' : '#d1d5db'}
+                                  color={isCompleted ? AGM_GREEN : isExcused ? '#666666' : '#d1d5db'}
                                   style={{ marginRight: 12 }}
                                 />
                                 <View style={{ flex: 1 }}>
@@ -1095,25 +1095,25 @@ export default function DashboardScreen() {
                                     style={{
                                       fontSize: 14,
                                       fontWeight: '500',
-                                      color: isCompleted ? AGM_GREEN : isExcused ? '#999999' : AGM_DARK,
+                                      color: isCompleted ? AGM_GREEN : isExcused ? '#666666' : AGM_DARK,
                                       textDecorationLine: isCompleted || isExcused ? 'line-through' : 'none',
                                     }}
                                   >
                                     {habit.name}
                                   </Text>
                                   {habitCompletionStats[habit.id] !== undefined && (
-                                    <Text style={{ fontSize: 11, color: '#ff6b6b', marginTop: 2 }}>
+                                    <Text style={{ fontSize: 12, color: '#d32f2f', marginTop: 2 }}>
                                       {habitCompletionStats[habit.id].completed}/{habitCompletionStats[habit.id].total}
                                     </Text>
                                   )}
                                   {isExcused && habitCompletion?.excuseReason && (
-                                    <Text style={{ fontSize: 11, color: '#ff6b6b', marginTop: 2, fontStyle: 'italic' }}>
+                                    <Text style={{ fontSize: 12, color: '#d32f2f', marginTop: 2, fontStyle: 'italic' }}>
                                       Excused: {habitCompletion.excuseReason}
                                     </Text>
                                   )}
                                 </View>
                                 {isCompleted && habitCompletion?.duration && (
-                                  <Text style={{ fontSize: 11, color: '#999999' }}>
+                                  <Text style={{ fontSize: 12, color: '#666666' }}>
                                     {Math.floor(habitCompletion.duration / 1000)}s
                                   </Text>
                                 )}
@@ -1176,24 +1176,24 @@ export default function DashboardScreen() {
                     shadowRadius: 2,
                     elevation: 2,
                     borderLeftWidth: 3,
-                    borderLeftColor: isCompleted ? AGM_GREEN : isExcused ? '#999999' : '#e5e7eb',
+                    borderLeftColor: isCompleted ? AGM_GREEN : isExcused ? '#666666' : '#e5e7eb',
                   }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 15, fontWeight: '600', color: AGM_DARK, marginBottom: 2, textDecorationLine: isExcused ? 'line-through' : 'none', color: isExcused ? '#999999' : AGM_DARK }}>
+                      <Text style={{ fontSize: 15, fontWeight: '600', color: AGM_DARK, marginBottom: 2, textDecorationLine: isExcused ? 'line-through' : 'none', color: isExcused ? '#666666' : AGM_DARK }}>
                         {habit.name}
                       </Text>
                       {habit.description && (
                         <Text style={{ fontSize: 13, color: '#666666', marginBottom: 8 }}>{habit.description}</Text>
                       )}
                       {habitCompletionStats[habit.id] !== undefined && (
-                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#ff6b6b' }}>
+                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#d32f2f' }}>
                           {habitCompletionStats[habit.id].completed} completed in {habitCompletionStats[habit.id].total} {habitCompletionStats[habit.id].total === 1 ? 'day' : 'days'}
                         </Text>
                       )}
                       {isExcused && completion?.excuseReason && (
-                        <Text style={{ fontSize: 11, color: '#ff6b6b', marginTop: 4, fontStyle: 'italic' }}>
+                        <Text style={{ fontSize: 12, color: '#d32f2f', marginTop: 4, fontStyle: 'italic' }}>
                           Excused: {completion.excuseReason}
                         </Text>
                       )}
@@ -1202,7 +1202,7 @@ export default function DashboardScreen() {
                       <MaterialCommunityIcons
                         name={isCompleted ? 'check-circle' : isExcused ? 'minus-circle' : 'circle-outline'}
                         size={24}
-                        color={isCompleted ? AGM_GREEN : isExcused ? '#999999' : '#d1d5db'}
+                        color={isCompleted ? AGM_GREEN : isExcused ? '#666666' : '#d1d5db'}
                       />
                     </View>
                   </View>

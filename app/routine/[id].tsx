@@ -708,7 +708,7 @@ export default function RoutineDetailScreen() {
                   <Text style={{ fontSize: 48, fontWeight: 'bold', color: AGM_DARK }}>
                     {formatTime(elapsedSeconds)}
                   </Text>
-                  <Text style={{ fontSize: 11, color: '#666666', marginTop: 4 }}>
+                  <Text style={{ fontSize: 12, color: '#666666', marginTop: 4 }}>
                     of {formatTime(EXPECTED_DURATION)}
                   </Text>
                 </View>
@@ -738,7 +738,7 @@ export default function RoutineDetailScreen() {
                     <MaterialCommunityIcons
                       name="clock-remove"
                       size={24}
-                      color="#ff6b6b"
+                      color="#d32f2f"
                     />
                   </TouchableOpacity>
                 )}

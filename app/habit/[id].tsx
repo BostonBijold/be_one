@@ -398,7 +398,7 @@ export default function HabitDetailScreen() {
                 <MaterialCommunityIcons
                   name="clock-remove"
                   size={20}
-                  color="#ff6b6b"
+                  color="#d32f2f"
                 />
               </TouchableOpacity>
             )}
@@ -493,7 +493,7 @@ export default function HabitDetailScreen() {
                 <Text style={{ fontSize: 48, fontWeight: 'bold', color: AGM_DARK }}>
                   {formatTime(elapsedSeconds)}
                 </Text>
-                <Text style={{ fontSize: 11, color: '#666666', marginTop: 4 }}>
+                <Text style={{ fontSize: 12, color: '#666666', marginTop: 4 }}>
                   Elapsed
                 </Text>
               </View>
@@ -504,12 +504,12 @@ export default function HabitDetailScreen() {
               {averageDurationSeconds ? (
                 <>
                   <Text style={{ fontSize: 12, color: '#666666' }}>Average</Text>
-                  <Text style={{ fontSize: 18, fontWeight: '600', color: '#ff6b6b' }}>
+                  <Text style={{ fontSize: 18, fontWeight: '600', color: '#d32f2f' }}>
                     {formatTime(Math.floor(averageDurationSeconds))}
                   </Text>
                 </>
               ) : (
-                <Text style={{ fontSize: 12, color: '#999999' }}>No completion history</Text>
+                <Text style={{ fontSize: 12, color: '#666666' }}>No completion history</Text>
               )}
             </View>
 
@@ -533,7 +533,7 @@ export default function HabitDetailScreen() {
             )}
             {isExcused && (
               <View style={{ marginBottom: 32, alignItems: 'center' }}>
-                <Text style={{ fontSize: 13, color: '#ff6b6b', fontWeight: 'bold' }}>
+                <Text style={{ fontSize: 13, color: '#d32f2f', fontWeight: 'bold' }}>
                   Excused: {completion?.excuseReason}
                 </Text>
               </View>

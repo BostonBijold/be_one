@@ -1024,7 +1024,7 @@ export default function VirtuesScreen() {
                   {/* Day Headers Row */}
                   <View style={{ flexDirection: 'row', marginBottom: 16 }}>
                     <View style={{ width: 100, justifyContent: 'center' }}>
-                      <Text style={{ fontSize: 11, fontWeight: '600', color: AGM_DARK }}>Virtue</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: AGM_DARK }}>Virtue</Text>
                     </View>
                     {Object.keys(weeklyData)
                       .sort()
@@ -1054,7 +1054,7 @@ export default function VirtuesScreen() {
                       <View key={virtue.id} style={{ marginBottom: index < virtues.length - 1 ? 12 : 0 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                           <View style={{ width: 100 }}>
-                            <Text style={{ fontSize: 11, fontWeight: '500', color: AGM_DARK, lineHeight: 14 }}>
+                            <Text style={{ fontSize: 12, fontWeight: '500', color: AGM_DARK, lineHeight: 14 }}>
                               {virtue.name}
                             </Text>
                           </View>

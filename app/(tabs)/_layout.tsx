@@ -12,7 +12,7 @@ export default function TabLayout() {
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: AGM_GREEN,
-          tabBarInactiveTintColor: '#999999',
+          tabBarInactiveTintColor: '#666666',
           headerShown: false,
           tabBarStyle: {
             backgroundColor: '#ffffff',
@@ -24,7 +24,7 @@ export default function TabLayout() {
             paddingHorizontal: 8,
           },
           tabBarLabelStyle: {
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: '600',
             marginTop: 4,
           },

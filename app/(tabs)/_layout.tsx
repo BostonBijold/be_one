@@ -1,19 +1,11 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Tabs, useRouter } from 'expo-router';
+import { Tabs } from 'expo-router';
 import React from 'react';
-import { TouchableOpacity, View } from 'react-native';
+import { View } from 'react-native';
 
 export default function TabLayout() {
-  const router = useRouter();
   const AGM_GREEN = '#4b5320';
-  const AGM_DARK = '#333333';
-  const AGM_STONE = '#f5f1e8';
 
-  const handleFABPress = () => {
-    // Navigate to the next routine via the dashboard's logic
-    // The dashboard will handle finding the next routine
-    router.push('/(tabs)');
-  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -57,9 +49,6 @@ export default function TabLayout() {
             tabBarIcon: ({ color }) => (
               <MaterialCommunityIcons name="repeat" size={26} color={color} />
             ),
-            tabBarItemStyle: {
-              marginRight: 40,
-            },
           }}
         />
         {/* Virtues tab hidden - accessible via action button */}
@@ -80,9 +69,6 @@ export default function TabLayout() {
             tabBarIcon: ({ color }) => (
               <MaterialCommunityIcons name="history" size={26} color={color} />
             ),
-            tabBarItemStyle: {
-              marginLeft: 40,
-            },
           }}
         />
         <Tabs.Screen
@@ -95,55 +81,6 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
-
-      {/* FAB Background Glow */}
-      <View
-        style={{
-          position: 'absolute',
-          bottom: 32,
-          left: '50%',
-          marginLeft: -42,
-          width: 84,
-          height: 84,
-          borderRadius: 42,
-          backgroundColor: '#ffffff',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 10,
-          borderTopWidth: 2,
-          borderLeftWidth: 2,
-          borderRightWidth: 2,
-          borderColor: '#d0d0d0',
-        }}
-      />
-
-      {/* Floating Action Button (FAB) - Start Button */}
-      <TouchableOpacity
-        onPress={handleFABPress}
-        activeOpacity={0.8}
-        style={{
-          position: 'absolute',
-          bottom: 38,
-          left: '50%',
-          marginLeft: -36,
-          width: 72,
-          height: 72,
-          borderRadius: 36,
-          backgroundColor: AGM_GREEN,
-          justifyContent: 'center',
-          alignItems: 'center',
-          shadowColor: '#ffffff',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
-          elevation: 12,
-          zIndex: 50,
-          borderWidth: 4,
-          borderColor: '#ffffff',
-        }}
-      >
-        <MaterialCommunityIcons name="play" size={36} color="white" />
-      </TouchableOpacity>
     </View>
   );
 }

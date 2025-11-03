@@ -21,24 +21,25 @@ export default function TabLayout() {
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: AGM_GREEN,
-          tabBarInactiveTintColor: '#666666',
+          tabBarInactiveTintColor: '#999999',
           headerShown: false,
           tabBarStyle: {
             backgroundColor: AGM_STONE,
-            borderTopColor: '#e0ddd0',
+            borderTopColor: '#d0ccc0',
             borderTopWidth: 1,
-            height: 80,
-            paddingBottom: 12,
-            paddingTop: 8,
-            paddingRight: 20,
+            height: 100,
+            paddingBottom: 16,
+            paddingTop: 12,
+            paddingHorizontal: 8,
+            justifyContent: 'space-around',
           },
           tabBarLabelStyle: {
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: '600',
-            marginTop: 4,
+            marginTop: 6,
           },
           tabBarIconStyle: {
-            marginBottom: 0,
+            marginBottom: 2,
           },
         }}
       >
@@ -47,7 +48,7 @@ export default function TabLayout() {
           options={{
             title: 'Dashboard',
             tabBarIcon: ({ color }) => (
-              <MaterialCommunityIcons name="home" size={24} color={color} />
+              <MaterialCommunityIcons name="home" size={26} color={color} />
             ),
           }}
         />
@@ -56,7 +57,7 @@ export default function TabLayout() {
           options={{
             title: 'Routines',
             tabBarIcon: ({ color }) => (
-              <MaterialCommunityIcons name="repeat" size={24} color={color} />
+              <MaterialCommunityIcons name="repeat" size={26} color={color} />
             ),
           }}
         />
@@ -67,7 +68,7 @@ export default function TabLayout() {
             title: 'Virtues',
             href: null,
             tabBarIcon: ({ color }) => (
-              <MaterialCommunityIcons name="heart" size={24} color={color} />
+              <MaterialCommunityIcons name="heart" size={26} color={color} />
             ),
           }}
         />
@@ -76,7 +77,7 @@ export default function TabLayout() {
           options={{
             title: 'History',
             tabBarIcon: ({ color }) => (
-              <MaterialCommunityIcons name="history" size={24} color={color} />
+              <MaterialCommunityIcons name="history" size={26} color={color} />
             ),
           }}
         />
@@ -88,35 +89,54 @@ export default function TabLayout() {
           options={{
             title: 'Settings',
             tabBarIcon: ({ color }) => (
-              <MaterialCommunityIcons name="cog" size={24} color={color} />
+              <MaterialCommunityIcons name="cog" size={26} color={color} />
             ),
           }}
         />
       </Tabs>
 
-      {/* Floating Action Button (FAB) */}
+      {/* FAB Container with background glow */}
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 35,
+          left: '50%',
+          marginLeft: -45,
+          width: 90,
+          height: 90,
+          borderRadius: 45,
+          backgroundColor: 'rgba(75, 83, 32, 0.1)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 10,
+        }}
+      />
+
+      {/* Floating Action Button (FAB) - Start Button */}
       <TouchableOpacity
         onPress={handleFABPress}
         style={{
           position: 'absolute',
-          bottom: 40,
+          bottom: 42,
           left: '50%',
-          marginLeft: -35,
-          width: 70,
-          height: 70,
-          borderRadius: 35,
+          marginLeft: -38,
+          width: 76,
+          height: 76,
+          borderRadius: 38,
           backgroundColor: AGM_GREEN,
           justifyContent: 'center',
           alignItems: 'center',
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 12,
-          elevation: 8,
-          zIndex: 100,
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.25,
+          shadowRadius: 10,
+          elevation: 12,
+          zIndex: 50,
+          borderWidth: 2,
+          borderColor: 'rgba(255, 255, 255, 0.2)',
         }}
       >
-        <MaterialCommunityIcons name="play" size={40} color="white" />
+        <MaterialCommunityIcons name="play" size={42} color="white" />
       </TouchableOpacity>
     </View>
   );

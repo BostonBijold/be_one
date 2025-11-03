@@ -645,7 +645,7 @@ export default function DashboardScreen() {
       {/* App Header - Static */}
       <AppHeader />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* Week's Virtue & Daily Challenge Combined Card */}
         {(weeklyVirtue || dailyData?.dailyChallenge) && (
           <View style={{ paddingHorizontal: 16, paddingTop: 24 }}>
@@ -1231,57 +1231,6 @@ export default function DashboardScreen() {
           </View>
         )}
       </ScrollView>
-
-      {/* Persistent Action Button */}
-      {(() => {
-        const { label, action, showButton } = getActionButtonState();
-        if (!showButton) return null;
-
-        return (
-          <View
-            style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              backgroundColor: AGM_STONE,
-              paddingHorizontal: 16,
-              paddingVertical: 12,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: -4 },
-              shadowOpacity: 0.1,
-              shadowRadius: 8,
-              elevation: 10,
-            }}
-          >
-            <TouchableOpacity
-              onPress={action}
-              style={{
-                backgroundColor: AGM_GREEN,
-                borderRadius: 12,
-                paddingVertical: 16,
-                alignItems: 'center',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 8,
-                elevation: 5,
-              }}
-            >
-              <Text
-                style={{
-                  color: 'white',
-                  fontSize: 16,
-                  fontWeight: '700',
-                  letterSpacing: 0.5,
-                }}
-              >
-                {label}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        );
-      })()}
     </SafeAreaView>
   );
 }

@@ -340,43 +340,7 @@ export default function HistoryScreen() {
           )}
         </View>
 
-        {/* Stats Card */}
-        {dailyData && totalCount > 0 && (
-          <View style={{
-            backgroundColor: '#ffffff',
-            padding: 16,
-            borderRadius: 12,
-            marginBottom: 16,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 3,
-          }}>
-            <Text style={{ fontSize: 18, fontWeight: '600', color: AGM_DARK, marginBottom: 12 }}>
-              Daily Summary
-            </Text>
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-              <View style={{ flex: 1, backgroundColor: '#e5e7eb', height: 8, borderRadius: 4, overflow: 'hidden' }}>
-                <View style={{
-                  width: `${completionPercentage}%`,
-                  height: '100%',
-                  backgroundColor: AGM_GREEN
-                }} />
-              </View>
-              <Text style={{ marginLeft: 12, fontSize: 16, fontWeight: '600', color: AGM_DARK }}>
-                {completionPercentage}%
-              </Text>
-            </View>
-
-            <Text style={{ fontSize: 14, color: '#666' }}>
-              {completedCount} of {totalCount} habits completed
-            </Text>
-          </View>
-        )}
-
-        {/* Routines Section */}
+        {/* Routines Section - PRIORITIZED FIRST */}
         {dailyData && routines.length > 0 && Object.keys(dailyData.routineCompletions || {}).length > 0 && (
           <View style={{
             backgroundColor: '#ffffff',
@@ -388,6 +352,8 @@ export default function HistoryScreen() {
             shadowOpacity: 0.1,
             shadowRadius: 4,
             elevation: 3,
+            borderLeftWidth: 4,
+            borderLeftColor: AGM_GREEN,
           }}>
             <Text style={{ fontSize: 18, fontWeight: '600', color: AGM_DARK, marginBottom: 12 }}>
               Routines
@@ -480,6 +446,42 @@ export default function HistoryScreen() {
                 </View>
               );
             })}
+          </View>
+        )}
+
+        {/* Stats Card - After Routines */}
+        {dailyData && totalCount > 0 && (
+          <View style={{
+            backgroundColor: '#ffffff',
+            padding: 16,
+            borderRadius: 12,
+            marginBottom: 16,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 3,
+          }}>
+            <Text style={{ fontSize: 18, fontWeight: '600', color: AGM_DARK, marginBottom: 12 }}>
+              Daily Summary
+            </Text>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <View style={{ flex: 1, backgroundColor: '#e5e7eb', height: 8, borderRadius: 4, overflow: 'hidden' }}>
+                <View style={{
+                  width: `${completionPercentage}%`,
+                  height: '100%',
+                  backgroundColor: AGM_GREEN
+                }} />
+              </View>
+              <Text style={{ marginLeft: 12, fontSize: 16, fontWeight: '600', color: AGM_DARK }}>
+                {completionPercentage}%
+              </Text>
+            </View>
+
+            <Text style={{ fontSize: 14, color: '#666' }}>
+              {completedCount} of {totalCount} habits completed
+            </Text>
           </View>
         )}
 

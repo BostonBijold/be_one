@@ -250,47 +250,57 @@ export async function createTestData() {
       }
 
       // ===== CREATE ROUTINE COMPLETION DATA =====
-      // Only create for days with all 3 habits completed: days 6, 5, 1
-      const completedHabits = [habit1.id, habit2.id, habit3.id].filter(
-        hId => dailyData.habitCompletions[hId]?.completed
-      );
-
-      if (completedHabits.length === 3) {
-        // All 3 habits are completed - record routine completion
+      // Create routine completion for any day that isn't completely missed
+      // Completely missed = day 2 (daysAgo === 2)
+      if (daysAgo !== 2) {
+        // Get all habit completions for this day
         const habit1Completion = dailyData.habitCompletions[habit1.id];
         const habit2Completion = dailyData.habitCompletions[habit2.id];
         const habit3Completion = dailyData.habitCompletions[habit3.id];
 
-        // Calculate routine timing
-        const startTimeMs = new Date(habit1Completion.startTime!).getTime();
-        const endTimeMs = new Date(habit3Completion.endTime!).getTime();
-        const totalDurationMs = endTimeMs - startTimeMs;
+        // Find earliest start time and latest end time from completed habits
+        const completedTimes = [habit1Completion, habit2Completion, habit3Completion]
+          .filter(c => c && c.completed && c.startTime && c.endTime);
 
-        dailyData.routineCompletions[routine.id] = {
-          completed: true,
-          completedAt: new Date(endTimeMs).toISOString(),
-          totalDuration: totalDurationMs,
-          startTime: new Date(startTimeMs).toISOString(),
-          endTime: new Date(endTimeMs).toISOString(),
-          habitTimes: {
-            [habit1.id]: {
-              startTime: habit1Completion.startTime!,
-              endTime: habit1Completion.endTime!,
-              duration: habit1Completion.duration!,
-            },
-            [habit2.id]: {
-              startTime: habit2Completion.startTime!,
-              endTime: habit2Completion.endTime!,
-              duration: habit2Completion.duration!,
-            },
-            [habit3.id]: {
-              startTime: habit3Completion.startTime!,
-              endTime: habit3Completion.endTime!,
-              duration: habit3Completion.duration!,
-            },
-          },
-        };
-        console.log(`  Recorded routine completion: ${formatTime(Math.floor(totalDurationMs / 1000))}`);
+        if (completedTimes.length > 0) {
+          const startTimeMs = Math.min(...completedTimes.map(c => new Date(c.startTime!).getTime()));
+          const endTimeMs = Math.max(...completedTimes.map(c => new Date(c.endTime!).getTime()));
+          const totalDurationMs = endTimeMs - startTimeMs;
+
+          // Build habitTimes only for completed habits
+          const habitTimes: any = {};
+          if (habit1Completion?.completed && habit1Completion.startTime && habit1Completion.endTime) {
+            habitTimes[habit1.id] = {
+              startTime: habit1Completion.startTime,
+              endTime: habit1Completion.endTime,
+              duration: habit1Completion.duration || 0,
+            };
+          }
+          if (habit2Completion?.completed && habit2Completion.startTime && habit2Completion.endTime) {
+            habitTimes[habit2.id] = {
+              startTime: habit2Completion.startTime,
+              endTime: habit2Completion.endTime,
+              duration: habit2Completion.duration || 0,
+            };
+          }
+          if (habit3Completion?.completed && habit3Completion.startTime && habit3Completion.endTime) {
+            habitTimes[habit3.id] = {
+              startTime: habit3Completion.startTime,
+              endTime: habit3Completion.endTime,
+              duration: habit3Completion.duration || 0,
+            };
+          }
+
+          dailyData.routineCompletions[routine.id] = {
+            completed: true,
+            completedAt: new Date(endTimeMs).toISOString(),
+            totalDuration: totalDurationMs,
+            startTime: new Date(startTimeMs).toISOString(),
+            endTime: new Date(endTimeMs).toISOString(),
+            habitTimes,
+          };
+          console.log(`  Recorded routine completion: ${formatTime(Math.floor(totalDurationMs / 1000))}`);
+        }
       }
 
       // Save daily data

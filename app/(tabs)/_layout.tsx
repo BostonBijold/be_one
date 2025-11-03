@@ -1,13 +1,10 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'expo-router';
 import { TouchableOpacity, View } from 'react-native';
-import dataService from '@/services/dataService';
 
 export default function TabLayout() {
-  const { user } = useAuth();
   const router = useRouter();
   const AGM_GREEN = '#4b5320';
   const AGM_DARK = '#333333';
@@ -84,19 +81,7 @@ export default function TabLayout() {
           }}
         />
         {/* Habits tab hidden - accessible from Routines tab */}
-
-        {/* Admin Tab - Only visible to admin users */}
-        {user?.isAdmin && (
-          <Tabs.Screen
-            name="admin"
-            options={{
-              title: 'Admin',
-              tabBarIcon: ({ color }) => (
-                <MaterialCommunityIcons name="shield-admin" size={24} color={color} />
-              ),
-            }}
-          />
-        )}
+        {/* Admin tab hidden - accessible from Settings tab */}
 
         <Tabs.Screen
           name="settings"

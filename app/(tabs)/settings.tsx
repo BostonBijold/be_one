@@ -9,6 +9,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useAuth } from '@/hooks/useAuth';
 import authService from '../../services/authService';
 
 const AGM_GREEN = '#4b5320';
@@ -17,6 +19,8 @@ const AGM_STONE = '#f5f1e8';
 const APP_VERSION = '1.0.0';
 
 export default function SettingsScreen() {
+  const router = useRouter();
+  const { user } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
 
   const handleSignOut = () => {
@@ -313,6 +317,43 @@ export default function SettingsScreen() {
             <MaterialCommunityIcons name="chevron-right" size={24} color="#999" />
           </TouchableOpacity>
         </View>
+
+        {/* Admin Section - Only visible for admin users */}
+        {user?.isAdmin && (
+          <View style={{
+            backgroundColor: '#ffffff',
+            borderRadius: 12,
+            marginBottom: 16,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+            elevation: 3,
+            borderLeftWidth: 4,
+            borderLeftColor: AGM_GREEN,
+          }}>
+            <View style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' }}>
+              <Text style={{ fontSize: 18, fontWeight: '600', color: AGM_GREEN }}>
+                Admin
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => router.push('/admin')}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                padding: 16,
+              }}
+            >
+              <MaterialCommunityIcons name="shield-admin" size={24} color={AGM_GREEN} />
+              <Text style={{ flex: 1, marginLeft: 12, fontSize: 16, color: AGM_DARK }}>
+                Admin Dashboard
+              </Text>
+              <MaterialCommunityIcons name="chevron-right" size={24} color="#999" />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Sign Out Button */}
         <TouchableOpacity

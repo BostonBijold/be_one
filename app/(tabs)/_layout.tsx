@@ -59,7 +59,16 @@ export default function TabLayout() {
           ),
         }}
       />
-      {/* Habits and History tabs hidden - accessible from Routines tab */}
+      <Tabs.Screen
+        name="history"
+        options={{
+          title: 'History',
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="history" size={24} color={color} />
+          ),
+        }}
+      />
+      {/* Habits tab hidden - accessible from Routines tab */}
 
       {/* Admin Tab - Only visible to admin users */}
       {user?.isAdmin && (

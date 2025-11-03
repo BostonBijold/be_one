@@ -1,5 +1,6 @@
 import dataService, { Habit, Routine, HabitCompletion, DailyData } from '@/services/dataService';
 import AppHeader from '@/components/AppHeader';
+import ReportModal from '@/components/ReportModal';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
@@ -57,6 +58,10 @@ export default function RoutinesScreen() {
   const [showHabitsModal, setShowHabitsModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
+  // Report modal state
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [selectedRoutineForReport, setSelectedRoutineForReport] = useState<Routine | null>(null);
+
   // Add Individual Habit modal state
   const [showAddIndividualHabitModal, setShowAddIndividualHabitModal] = useState(false);
   const [individualHabitName, setIndividualHabitName] = useState('');
@@ -90,6 +95,9 @@ export default function RoutinesScreen() {
   const [expandedRoutines, setExpandedRoutines] = useState<number[]>([]);
   const [weekData, setWeekData] = useState<{ [date: string]: DailyData | null }>({});
   const [monthData, setMonthData] = useState<{ [date: string]: DailyData | null }>({});
+
+  // Report modal: store 7 days of history for min/max calculations
+  const [reportDailyDataArray, setReportDailyDataArray] = useState<DailyData[]>([]);
 
   // Load routines and habits directly
   const loadData = async () => {
@@ -701,16 +709,49 @@ export default function RoutinesScreen() {
                         <Text style={{ fontSize: 13, color: '#999999', marginBottom: 12, fontStyle: 'italic' }}>No habits in this routine</Text>
                       )}
 
-                      {/* Edit Button */}
-                      <TouchableOpacity
-                        onPress={() => openEditModal(routine)}
-                        style={{ backgroundColor: AGM_GREEN, borderRadius: 8, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' }}
-                      >
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-                          <MaterialCommunityIcons name="pencil" size={18} color="white" style={{ marginRight: 6 }} />
-                          <Text style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>Edit</Text>
-                        </View>
-                      </TouchableOpacity>
+                      {/* Edit and Report Buttons */}
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <TouchableOpacity
+                          onPress={() => openEditModal(routine)}
+                          style={{ flex: 1, backgroundColor: AGM_GREEN, borderRadius: 8, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                            <MaterialCommunityIcons name="pencil" size={18} color="white" style={{ marginRight: 6 }} />
+                            <Text style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>Edit</Text>
+                          </View>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={async () => {
+                            // Load past 7 days of daily data for min/max calculations
+                            const today = new Date();
+                            const dailyDataArray: DailyData[] = [];
+
+                            for (let i = 6; i >= 0; i--) {
+                              const date = new Date(today);
+                              date.setDate(date.getDate() - i);
+                              const dateString = dataService.formatDateString(date);
+                              try {
+                                const dayData = await dataService.getTodayData(dateString);
+                                if (dayData) {
+                                  dailyDataArray.push(dayData);
+                                }
+                              } catch (err) {
+                                console.error(`Error loading daily data for ${dateString}:`, err);
+                              }
+                            }
+
+                            setReportDailyDataArray(dailyDataArray);
+                            setSelectedRoutineForReport(routine);
+                            setShowReportModal(true);
+                          }}
+                          style={{ flex: 1, backgroundColor: AGM_GREEN, borderRadius: 8, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                            <MaterialCommunityIcons name="chart-bar" size={18} color="white" style={{ marginRight: 6 }} />
+                            <Text style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>Report</Text>
+                          </View>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   )}
                 </View>
@@ -1747,6 +1788,20 @@ export default function RoutinesScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Report Modal */}
+      {selectedRoutineForReport && (
+        <ReportModal
+          visible={showReportModal}
+          routine={selectedRoutineForReport}
+          habits={getRoutineHabits(selectedRoutineForReport.habits)}
+          dailyDataArray={reportDailyDataArray}
+          onClose={() => {
+            setShowReportModal(false);
+            setSelectedRoutineForReport(null);
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }

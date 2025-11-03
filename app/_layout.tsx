@@ -1,17 +1,21 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack, useRouter, useRootNavigationState } from 'expo-router';
+import { Stack, useRootNavigationState } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import 'react-native-reanimated';
 import authService, { UserData } from '@/services/authService';
+import { TimerModalProvider } from '@/context/TimerModalContext';
+import TimerModal from '@/components/TimerModal';
+import { useTimerModal } from '@/context/TimerModalContext';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+function RootLayoutContent() {
   const rootNavigationState = useRootNavigationState();
   const [user, setUser] = useState<UserData | null>(null);
   const [initializing, setInitializing] = useState(true);
+  const { state, closeTimerModal, updateDailyData } = useTimerModal();
 
   useEffect(() => {
     SplashScreen.hideAsync().catch(() => {});
@@ -53,6 +57,23 @@ export default function RootLayout() {
           <Stack.Screen name="(auth)" options={{ title: 'Login' }} />
         )}
       </Stack>
+
+      {/* Global Timer Modal that can be shown from anywhere */}
+      <TimerModal
+        visible={state.isVisible}
+        habit={state.habit}
+        dailyData={state.dailyData}
+        onClose={closeTimerModal}
+        onDailyDataUpdate={updateDailyData}
+      />
     </ThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <TimerModalProvider>
+      <RootLayoutContent />
+    </TimerModalProvider>
   );
 }

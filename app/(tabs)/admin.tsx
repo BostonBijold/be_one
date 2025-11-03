@@ -236,7 +236,9 @@ export default function AdminScreen() {
     try {
       setCreatingTestData(true);
       await createTestData();
-      Alert.alert('Success', 'Test data created! Check the dashboard to see 3 test habits with a week of data.');
+      // Reload data to show newly created test data
+      await loadData();
+      Alert.alert('Success', 'Test data created! Go to the Routines tab to see the "Morning Ritual" with a week of history.\n\nExpand the routine and click Report to see the habit statistics!');
     } catch (err: any) {
       console.error('Error creating test data:', err);
       Alert.alert('Error', err.message || 'Failed to create test data');
@@ -249,7 +251,7 @@ export default function AdminScreen() {
   const handleDeleteTestData = () => {
     Alert.alert(
       'Delete Test Data',
-      'Are you sure you want to delete the test habits (Morning Walk, Read, Meditate)? This cannot be undone.',
+      'Are you sure you want to delete the test routine and habits? This cannot be undone.',
       [
         { text: 'Cancel', onPress: () => {} },
         {
@@ -258,6 +260,8 @@ export default function AdminScreen() {
             try {
               setDeletingTestData(true);
               await deleteTestData();
+              // Reload data after deletion
+              await loadData();
               Alert.alert('Success', 'Test data deleted!');
             } catch (err: any) {
               console.error('Error deleting test data:', err);

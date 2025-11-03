@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTimerModal } from '@/context/TimerModalContext';
 
 const AGM_GREEN = '#4b5320';
 const AGM_DARK = '#333333';
@@ -21,6 +22,7 @@ const AGM_STONE = '#f5f1e8';
 export default function DashboardScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const { openTimerModal } = useTimerModal();
 
   // Load data directly
   const [routines, setRoutines] = useState<Routine[]>([]);
@@ -680,7 +682,7 @@ export default function DashboardScreen() {
               return (
                 <TouchableOpacity
                   key={habit.id}
-                  onPress={() => router.push(`/habit/${habit.id}`)}
+                  onPress={() => openTimerModal(habit, dailyData)}
                   style={{
                     backgroundColor: 'white',
                     borderRadius: 12,

@@ -8,24 +8,30 @@ import {
   Alert,
   Modal,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Svg, { Circle, Path } from 'react-native-svg';
 import dataService, { Habit, DailyData } from '@/services/dataService';
 
 const AGM_GREEN = '#4b5320';
 const AGM_DARK = '#333333';
-const AGM_STONE = '#f5f1e8';
 const DEFAULT_EXPECTED_DURATION = 10 * 60 * 1000; // 10 minutes in milliseconds
 
-export default function HabitDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
+interface TimerModalProps {
+  visible: boolean;
+  habit: Habit | null;
+  dailyData: DailyData | null;
+  onClose: () => void;
+  onDailyDataUpdate: (dailyData: DailyData) => void;
+}
 
-  const [habit, setHabit] = useState<Habit | null>(null);
-  const [dailyData, setDailyData] = useState<DailyData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export default function TimerModal({
+  visible,
+  habit,
+  dailyData,
+  onClose,
+  onDailyDataUpdate,
+}: TimerModalProps) {
+  const [loading, setLoading] = useState(false);
 
   // Timer state
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -45,47 +51,21 @@ export default function HabitDetailScreen() {
 
   const todayString = dataService.getTodayString();
 
-  // Load habit and daily data
+  // Initialize timer when modal opens
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const [habitsData, dailyDataResult] = await Promise.all([
-          dataService.getHabits(),
-          dataService.getTodayData(todayString),
-        ]);
-
-        // Find the habit by ID
-        const foundHabit = habitsData.find((h) => h.id === parseInt(id || '0'));
-        if (!foundHabit) {
-          setError('Habit not found');
-          return;
-        }
-
-        setHabit(foundHabit);
-        setDailyData(dailyDataResult);
-
-        // Set habit start time if not already set
-        if (!habitStartTime) {
-          setHabitStartTime(Date.now());
-        }
-      } catch (err: any) {
-        console.error('Error loading habit detail:', err);
-        setError(err.message || 'Failed to load habit');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+    if (visible && habit) {
+      setElapsedSeconds(0);
+      setHabitStartTime(Date.now());
+      setLoading(false);
+    }
+  }, [visible, habit?.id]);
 
   // Auto-start timer when component loads (only if not completed or excused)
   useEffect(() => {
-    if (!habit || loading) return;
+    if (!visible || !habit || loading) {
+      if (timerRef.current) clearInterval(timerRef.current);
+      return;
+    }
 
     const completion = dailyData?.habitCompletions?.[habit.id];
     const isCompleted = completion?.completed || false;
@@ -106,7 +86,7 @@ export default function HabitDetailScreen() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [habit, loading, dailyData]);
+  }, [habit, loading, dailyData, visible]);
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -115,35 +95,8 @@ export default function HabitDetailScreen() {
     };
   }, []);
 
-
-  if (loading) {
-    return (
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'flex-end' }}>
-        <View style={{ backgroundColor: 'white', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 32, justifyContent: 'center', alignItems: 'center', minHeight: '50%' }}>
-          <ActivityIndicator size="large" color={AGM_GREEN} />
-          <Text style={{ marginTop: 16, color: AGM_DARK }}>Loading habit...</Text>
-        </View>
-      </View>
-    );
-  }
-
-  if (error || !habit) {
-    return (
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'flex-end' }}>
-        <View style={{ backgroundColor: 'white', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 32, justifyContent: 'center', alignItems: 'center' }}>
-          <MaterialCommunityIcons name="alert-circle" size={56} color="#ef4444" />
-          <Text style={{ fontSize: 18, fontWeight: '600', color: AGM_DARK, marginTop: 16, textAlign: 'center' }}>
-            {error || 'Habit not found'}
-          </Text>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={{ backgroundColor: AGM_GREEN, borderRadius: 8, paddingHorizontal: 24, paddingVertical: 12, marginTop: 24 }}
-          >
-            <Text style={{ color: 'white', fontWeight: '600' }}>Go Back</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
+  if (!habit) {
+    return null;
   }
 
   const completion = dailyData?.habitCompletions?.[habit.id];
@@ -210,6 +163,7 @@ export default function HabitDetailScreen() {
     if (!habit || !habitStartTime) return;
 
     try {
+      setLoading(true);
       const endTimeMs = Date.now();
       const durationMs = endTimeMs - habitStartTime;
 
@@ -235,7 +189,7 @@ export default function HabitDetailScreen() {
 
       // Save to Firebase
       await dataService.updateDailyData(todayString, updatedDailyData);
-      setDailyData(updatedDailyData);
+      onDailyDataUpdate(updatedDailyData);
 
       // Update habit aggregate stats for average calculation
       const newTotalSum = (habit.totalDurationSum || 0) + durationMs;
@@ -245,9 +199,11 @@ export default function HabitDetailScreen() {
         totalDurationSum: newTotalSum,
         completionCount: newCount,
       });
-    } catch (err: any) {
+
+      setLoading(false);
+    } catch {
+      setLoading(false);
       Alert.alert('Error', 'Failed to save habit completion');
-      console.error('Error completing habit:', err);
     }
   };
 
@@ -256,9 +212,13 @@ export default function HabitDetailScreen() {
     if (!habit) return;
 
     try {
+      setLoading(true);
       // Get the current completion to retrieve stats
       const completion = dailyData?.habitCompletions?.[habit.id];
-      if (!completion || !completion.completed) return;
+      if (!completion || !completion.completed) {
+        setLoading(false);
+        return;
+      }
 
       const durationMs = completion.duration || 0;
 
@@ -270,7 +230,7 @@ export default function HabitDetailScreen() {
 
       // Save updated daily data
       await dataService.updateDailyData(todayString, updatedDailyData);
-      setDailyData(updatedDailyData);
+      onDailyDataUpdate(updatedDailyData);
 
       // Reverse habit aggregate stats
       const newTotalSum = Math.max((habit.totalDurationSum || 0) - durationMs, 0);
@@ -284,9 +244,10 @@ export default function HabitDetailScreen() {
       // Reset timer state
       setElapsedSeconds(0);
       setHabitStartTime(Date.now());
-    } catch (err: any) {
+      setLoading(false);
+    } catch {
+      setLoading(false);
       Alert.alert('Error', 'Failed to restart habit');
-      console.error('Error restarting habit:', err);
     }
   };
 
@@ -298,6 +259,7 @@ export default function HabitDetailScreen() {
     }
 
     try {
+      setLoading(true);
       // Initialize dailyData if it doesn't exist
       const updatedDailyData = dailyData || {
         date: todayString,
@@ -323,92 +285,66 @@ export default function HabitDetailScreen() {
 
       // Save to Firebase
       await dataService.updateDailyData(todayString, updatedDailyData);
-      setDailyData(updatedDailyData);
+      onDailyDataUpdate(updatedDailyData);
 
-      // Close modal and return to dashboard
+      // Close excuse modal
       setShowExcuseModal(false);
       setSelectedExcuseReason('');
+      setLoading(false);
 
-      Alert.alert('Done', `${habit.name} marked as excused`, [
-        {
-          text: 'OK',
-          onPress: () => router.back(),
-        },
-      ]);
-    } catch (error: any) {
-      console.error('Error excusing habit:', error);
-      Alert.alert('Error', error.message || 'Failed to excuse habit');
+      Alert.alert('Done', `${habit.name} marked as excused`);
+    } catch {
+      setLoading(false);
+      Alert.alert('Error', 'Failed to excuse habit');
     }
   };
 
+  if (!visible) {
+    return null;
+  }
+
   return (
-    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'flex-end' }}>
-        {/* Header with back button */}
-        <View style={{ backgroundColor: AGM_DARK, paddingHorizontal: 16, paddingVertical: 16 }}>
-          <TouchableOpacity onPress={() => router.back()} style={{ marginBottom: 12 }}>
-            <MaterialCommunityIcons name="chevron-left" size={28} color="white" />
-          </TouchableOpacity>
-          <Text style={{ color: 'white', fontSize: 28, fontWeight: 'bold' }}>
-            {habit.name}
-          </Text>
-          <Text style={{ color: '#ccc', fontSize: 14, marginTop: 4 }}>
-            {isCompleted ? '✓ Completed' : isExcused ? 'Excused' : 'In Progress'}
-          </Text>
-        </View>
-
-        {/* Timer Modal - Slide up from bottom */}
-        <Modal
-        visible={true}
-        transparent
-        animationType="slide"
-        onRequestClose={() => {}}
-      >
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'flex-end' }}>
-          <View
-            style={{
-              backgroundColor: 'white',
-              borderTopLeftRadius: 20,
-              borderTopRightRadius: 20,
-              paddingHorizontal: 32,
-              paddingTop: 32,
-              paddingBottom: 40,
-              maxHeight: '90%',
-              alignItems: 'center',
-              position: 'relative',
-            }}
-          >
-            {/* Excuse Button - top right of card (only show if in progress and excusable) */}
-            {!isCompleted && !isExcused && habit.excusable && (
-              <TouchableOpacity
-                onPress={() => setShowExcuseModal(true)}
-                style={{
-                  position: 'absolute',
-                  top: 12,
-                  right: 12,
-                  width: 40,
-                  height: 40,
-                  borderRadius: 20,
-                  backgroundColor: 'rgba(255, 107, 107, 0.15)',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  zIndex: 10,
-                }}
-              >
-                <MaterialCommunityIcons
-                  name="clock-remove"
-                  size={20}
-                  color="#ff6b6b"
-                />
-              </TouchableOpacity>
-            )}
-
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              style={{ width: '100%' }}
-              contentContainerStyle={{ alignItems: 'center', paddingTop: 20 }}
+        <View
+          style={{
+            backgroundColor: 'white',
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
+            paddingHorizontal: 32,
+            paddingTop: 32,
+            paddingBottom: 40,
+            maxHeight: '90%',
+            alignItems: 'center',
+            position: 'relative',
+          }}
+        >
+          {/* Excuse Button - top right of card (only show if in progress and excusable) */}
+          {!isCompleted && !isExcused && habit.excusable && (
+            <TouchableOpacity
+              onPress={() => setShowExcuseModal(true)}
+              style={{
+                position: 'absolute',
+                top: 12,
+                right: 12,
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: 'rgba(255, 107, 107, 0.15)',
+                justifyContent: 'center',
+                alignItems: 'center',
+                zIndex: 10,
+              }}
             >
-            {/* Circular Timer with SVG Progress Arc */}
+              <MaterialCommunityIcons name="clock-remove" size={20} color="#ff6b6b" />
+            </TouchableOpacity>
+          )}
+
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            style={{ width: '100%' }}
+            contentContainerStyle={{ alignItems: 'center', paddingTop: 20 }}
+          >
             {/* Expected duration - above circle */}
             <View style={{ marginBottom: 16, alignItems: 'center' }}>
               <Text style={{ fontSize: 12, color: '#666666' }}>Expected</Text>
@@ -461,7 +397,7 @@ export default function HabitDetailScreen() {
                 ) : null}
 
                 {/* Average marker - show as a line crossing the arc */}
-                {averageProgress !== null && averageProgress > 0 ? (() => {
+                {averageProgress !== null && averageProgress >= 0 ? (() => {
                   const avgAngle = averageProgress * 360;
                   const avgRadians = (avgAngle - 90) * (Math.PI / 180);
                   const innerRadius = 60; // Extend beyond inner edge
@@ -493,9 +429,7 @@ export default function HabitDetailScreen() {
                 <Text style={{ fontSize: 48, fontWeight: 'bold', color: AGM_DARK }}>
                   {formatTime(elapsedSeconds)}
                 </Text>
-                <Text style={{ fontSize: 11, color: '#666666', marginTop: 4 }}>
-                  Elapsed
-                </Text>
+                <Text style={{ fontSize: 11, color: '#666666', marginTop: 4 }}>Elapsed</Text>
               </View>
             </View>
 
@@ -514,7 +448,7 @@ export default function HabitDetailScreen() {
             </View>
 
             {/* Habit Name */}
-            <Text style={{ fontSize: 24, fontWeight: 'bold', color: AGM_DARK, textAlign: 'center', marginBottom: 8 }}>
+            <Text style={{ fontSize: 24, fontWeight: 'bold', color: AGM_DARK, textAlign: 'center', marginBottom: 8, marginTop: 24 }}>
               {habit.name}
             </Text>
 
@@ -545,11 +479,12 @@ export default function HabitDetailScreen() {
                 {/* Complete Button */}
                 <TouchableOpacity
                   onPress={handleCompleteHabit}
+                  disabled={loading}
                   style={{
                     width: 80,
                     height: 80,
                     borderRadius: 40,
-                    backgroundColor: AGM_GREEN,
+                    backgroundColor: loading ? '#999' : AGM_GREEN,
                     justifyContent: 'center',
                     alignItems: 'center',
                     shadowColor: '#000',
@@ -559,7 +494,11 @@ export default function HabitDetailScreen() {
                     elevation: 6,
                   }}
                 >
-                  <MaterialCommunityIcons name="check" size={40} color="white" />
+                  {loading ? (
+                    <ActivityIndicator color="white" size="large" />
+                  ) : (
+                    <MaterialCommunityIcons name="check" size={40} color="white" />
+                  )}
                 </TouchableOpacity>
               </View>
             )}
@@ -569,22 +508,26 @@ export default function HabitDetailScreen() {
               <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: 24 }}>
                 <TouchableOpacity
                   onPress={handleRestartHabit}
+                  disabled={loading}
                   style={{
                     flex: 1,
-                    backgroundColor: '#f0f0f0',
+                    backgroundColor: loading ? '#ddd' : '#f0f0f0',
                     borderRadius: 8,
                     paddingVertical: 12,
                     alignItems: 'center',
                   }}
                 >
-                  <Text style={{ color: AGM_DARK, fontWeight: '600', fontSize: 14 }}>Restart</Text>
+                  <Text style={{ color: AGM_DARK, fontWeight: '600', fontSize: 14 }}>
+                    {loading ? 'Loading...' : 'Restart'}
+                  </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  onPress={() => router.back()}
+                  onPress={onClose}
+                  disabled={loading}
                   style={{
                     flex: 1,
-                    backgroundColor: AGM_GREEN,
+                    backgroundColor: loading ? '#999' : AGM_GREEN,
                     borderRadius: 8,
                     paddingVertical: 12,
                     alignItems: 'center',
@@ -594,10 +537,9 @@ export default function HabitDetailScreen() {
                 </TouchableOpacity>
               </View>
             )}
-            </ScrollView>
-          </View>
+          </ScrollView>
         </View>
-      </Modal>
+      </View>
 
       {/* Excuse Modal */}
       <Modal
@@ -682,6 +624,7 @@ export default function HabitDetailScreen() {
                   setShowExcuseModal(false);
                   setSelectedExcuseReason('');
                 }}
+                disabled={loading}
                 style={{
                   flex: 1,
                   borderWidth: 1,
@@ -689,29 +632,33 @@ export default function HabitDetailScreen() {
                   borderRadius: 8,
                   paddingVertical: 12,
                   alignItems: 'center',
+                  backgroundColor: loading ? '#f5f5f5' : 'white',
                 }}
               >
                 <Text style={{ color: AGM_DARK, fontWeight: '600', fontSize: 14 }}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleExcuseHabit}
-                disabled={!selectedExcuseReason}
+                disabled={!selectedExcuseReason || loading}
                 style={{
                   flex: 1,
-                  backgroundColor: selectedExcuseReason ? AGM_GREEN : '#d1d5db',
+                  backgroundColor:
+                    !selectedExcuseReason || loading ? '#ccc' : AGM_GREEN,
                   borderRadius: 8,
                   paddingVertical: 12,
                   alignItems: 'center',
-                  opacity: selectedExcuseReason ? 1 : 0.6,
                 }}
               >
-                <Text style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>Mark as Excused</Text>
+                {loading ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text style={{ color: 'white', fontWeight: '600', fontSize: 14 }}>Confirm</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
         </View>
-        </Modal>
-      </View>
-    </View>
+      </Modal>
+    </Modal>
   );
 }

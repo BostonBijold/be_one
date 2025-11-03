@@ -20,8 +20,14 @@ const APP_VERSION = '1.0.0';
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
+
+  // Debug logging
+  React.useEffect(() => {
+    console.log('Settings - User object:', user);
+    console.log('Settings - Is Admin:', user?.isAdmin);
+  }, [user]);
 
   const handleSignOut = () => {
     Alert.alert(

@@ -110,7 +110,9 @@ export default function TabLayout() {
           justifyContent: 'center',
           alignItems: 'center',
           zIndex: 10,
-          borderWidth: 2,
+          borderTopWidth: 2,
+          borderLeftWidth: 2,
+          borderRightWidth: 2,
           borderColor: '#d0d0d0',
         }}
       />

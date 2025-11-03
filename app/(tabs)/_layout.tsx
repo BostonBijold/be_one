@@ -40,6 +40,7 @@ export default function TabLayout() {
             tabBarIcon: ({ color }) => (
               <MaterialCommunityIcons name="home" size={26} color={color} />
             ),
+            tabBarAccessibilityLabel: 'Dashboard Tab',
           }}
         />
         <Tabs.Screen
@@ -49,6 +50,7 @@ export default function TabLayout() {
             tabBarIcon: ({ color }) => (
               <MaterialCommunityIcons name="repeat" size={26} color={color} />
             ),
+            tabBarAccessibilityLabel: 'Routines Tab',
           }}
         />
         {/* Virtues tab hidden - accessible via action button */}
@@ -69,6 +71,7 @@ export default function TabLayout() {
             tabBarIcon: ({ color }) => (
               <MaterialCommunityIcons name="history" size={26} color={color} />
             ),
+            tabBarAccessibilityLabel: 'History Tab',
           }}
         />
         <Tabs.Screen
@@ -78,6 +81,7 @@ export default function TabLayout() {
             tabBarIcon: ({ color }) => (
               <MaterialCommunityIcons name="cog" size={26} color={color} />
             ),
+            tabBarAccessibilityLabel: 'Settings Tab',
           }}
         />
       </Tabs>

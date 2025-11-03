@@ -366,6 +366,9 @@ export default function SettingsScreen() {
         <TouchableOpacity
           onPress={handleSignOut}
           disabled={signingOut}
+          accessibilityLabel="Sign Out"
+          accessibilityHint="Logs out of your account"
+          accessibilityRole="button"
           style={{
             backgroundColor: '#dc2626',
             padding: 16,
@@ -401,10 +404,10 @@ export default function SettingsScreen() {
 
         {/* Footer */}
         <View style={{ alignItems: 'center', paddingBottom: 24 }}>
-          <Text style={{ fontSize: 12, color: '#999', textAlign: 'center' }}>
+          <Text style={{ fontSize: 12, color: '#666666', textAlign: 'center' }}>
             DAGM - Daily Achievement & Goal Manager
           </Text>
-          <Text style={{ fontSize: 12, color: '#999', marginTop: 4, textAlign: 'center' }}>
+          <Text style={{ fontSize: 12, color: '#666666', marginTop: 4, textAlign: 'center' }}>
             Made with dedication to personal growth
           </Text>
         </View>

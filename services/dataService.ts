@@ -1405,7 +1405,7 @@ class DataService {
       id: newId,
       name: habitData.name || '',
       description: habitData.description || '',
-      routineId: null, // Single habit
+      routineId: habitData.routineId !== undefined ? habitData.routineId : null,
       trackingType: habitData.trackingType || 'simple',
       duration: habitData.duration || null,
       expectedCompletionTime: habitData.expectedCompletionTime || null,

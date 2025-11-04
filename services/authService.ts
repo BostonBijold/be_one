@@ -179,6 +179,7 @@ class AuthService {
       return;
     }
 
+    // First time setup - validate cached session exists and is valid
     onAuthStateChanged(auth, async (user: User | null) => {
       if (user) {
         // Validate auth is working by checking Firestore access
@@ -194,17 +195,25 @@ class AuthService {
             }
           } catch (error: any) {
             // If we get permission errors, the cached auth is invalid
-            if (error.code === 'permission-denied' || error.message?.includes('permission')) {
-              console.warn('Cached auth is invalid, clearing session:', error.message);
+            const errorCode = error?.code || '';
+            const errorMsg = error?.message || '';
+            const isPermissionError =
+              errorCode === 'permission-denied' ||
+              errorMsg.includes('permission') ||
+              errorMsg.includes('Missing or insufficient permissions');
+
+            if (isPermissionError) {
+              console.warn('Cached auth is invalid (permission error), clearing session:', errorMsg);
               isValidAuth = false;
               // Sign out the invalid cached session
               try {
                 await signOut(auth);
+                console.log('Invalid cached session cleared');
               } catch (signOutError) {
                 console.warn('Error signing out invalid session:', signOutError);
               }
             } else {
-              console.warn('Could not fetch admin status:', error);
+              console.warn('Could not fetch admin status:', errorMsg || error);
             }
           }
         }

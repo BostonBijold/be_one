@@ -172,6 +172,70 @@ class AuthService {
     this.listeners.forEach((listener) => listener(this.currentUser));
   }
 
+  // Validate session by attempting Firestore read with timeout
+  private async validateSession(user: User): Promise<{ isValid: boolean; isAdmin: boolean }> {
+    if (!db) {
+      console.warn('Firestore not available, cannot validate session');
+      return { isValid: false, isAdmin: false };
+    }
+
+    return new Promise((resolve) => {
+      // Set timeout for validation - if it takes too long, assume invalid
+      const timeout = setTimeout(() => {
+        console.warn('Session validation timed out, clearing session');
+        resolve({ isValid: false, isAdmin: false });
+      }, 5000);
+
+      (async () => {
+        try {
+          console.log('Validating cached session for user:', user.uid);
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDoc = await getDoc(userDocRef);
+
+          clearTimeout(timeout);
+
+          if (userDoc.exists()) {
+            const isAdmin = userDoc.data()?.userInfo?.isAdmin || false;
+            console.log('Session validation successful, user is admin:', isAdmin);
+            resolve({ isValid: true, isAdmin });
+          } else {
+            console.log('User document not found in Firestore');
+            resolve({ isValid: true, isAdmin: false });
+          }
+        } catch (error: any) {
+          clearTimeout(timeout);
+
+          const errorCode = error?.code || '';
+          const errorMsg = error?.message || '';
+
+          console.error('Session validation error:', { errorCode, errorMsg });
+
+          // Check for various permission/auth failure indicators
+          const isPermissionError =
+            errorCode === 'permission-denied' ||
+            errorMsg.includes('permission') ||
+            errorMsg.includes('Missing or insufficient permissions') ||
+            errorMsg.includes('PERMISSION_DENIED') ||
+            errorCode.includes('PERMISSION');
+
+          const isAuthError =
+            errorCode === 'unauthenticated' ||
+            errorMsg.includes('unauthenticated') ||
+            errorMsg.includes('401');
+
+          if (isPermissionError || isAuthError) {
+            console.warn('Session validation failed: authentication/permission error, clearing session');
+            resolve({ isValid: false, isAdmin: false });
+          } else {
+            // For other errors (network, etc.), be lenient but log
+            console.warn('Session validation failed with non-auth error:', errorMsg);
+            resolve({ isValid: true, isAdmin: false });
+          }
+        }
+      })();
+    });
+  }
+
   // Initialize auth state listener
   init() {
     if (!isFirebaseAvailable()) {
@@ -181,44 +245,14 @@ class AuthService {
 
     // First time setup - validate cached session exists and is valid
     onAuthStateChanged(auth, async (user: User | null) => {
+      console.log('Auth state changed, user:', user ? user.uid : 'null');
+
       if (user) {
-        // Validate auth is working by checking Firestore access
-        let isAdmin = false;
-        let isValidAuth = true;
+        // Validate the cached session
+        const { isValid, isAdmin } = await this.validateSession(user);
 
-        if (db) {
-          try {
-            const userDocRef = doc(db, 'users', user.uid);
-            const userDoc = await getDoc(userDocRef);
-            if (userDoc.exists()) {
-              isAdmin = userDoc.data()?.userInfo?.isAdmin || false;
-            }
-          } catch (error: any) {
-            // If we get permission errors, the cached auth is invalid
-            const errorCode = error?.code || '';
-            const errorMsg = error?.message || '';
-            const isPermissionError =
-              errorCode === 'permission-denied' ||
-              errorMsg.includes('permission') ||
-              errorMsg.includes('Missing or insufficient permissions');
-
-            if (isPermissionError) {
-              console.warn('Cached auth is invalid (permission error), clearing session:', errorMsg);
-              isValidAuth = false;
-              // Sign out the invalid cached session
-              try {
-                await signOut(auth);
-                console.log('Invalid cached session cleared');
-              } catch (signOutError) {
-                console.warn('Error signing out invalid session:', signOutError);
-              }
-            } else {
-              console.warn('Could not fetch admin status:', errorMsg || error);
-            }
-          }
-        }
-
-        if (isValidAuth) {
+        if (isValid) {
+          console.log('Setting currentUser with valid session');
           this.currentUser = {
             uid: user.uid,
             name: user.displayName || '',
@@ -229,11 +263,23 @@ class AuthService {
             lastSignIn: user.metadata.lastSignInTime || '',
           };
         } else {
+          console.warn('Session validation failed, signing out invalid cached session');
           this.currentUser = null;
+
+          // Clear the invalid cached session
+          try {
+            await signOut(auth);
+            console.log('Invalid cached session cleared successfully');
+          } catch (signOutError) {
+            console.error('Error clearing invalid session:', signOutError);
+            // Even if signOut fails, we've already cleared currentUser
+          }
         }
       } else {
+        console.log('No user in auth state');
         this.currentUser = null;
       }
+
       this.notifyListeners();
     });
   }

@@ -1,12 +1,13 @@
 import {
-  signOut,
-  onAuthStateChanged,
-  User,
-  signInWithCredential,
-  GoogleAuthProvider,
+    GoogleAuthProvider,
+    onAuthStateChanged,
+    signInWithCredential,
+    signOut,
+    User,
 } from 'firebase/auth';
-import { auth, db } from './firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { Platform } from 'react-native';
+import { auth, db } from './firebase';
 
 export interface UserData {
   uid: string;
@@ -91,6 +92,11 @@ class AuthService {
 
   // Sign in with Google using Firebase popup (for web)
   async signInWithGooglePopup() {
+    // Prevent calling this method on mobile platforms
+    if (Platform.OS !== 'web') {
+      throw new Error('signInWithGooglePopup is only available on web platforms. Use signInWithGoogle for mobile.');
+    }
+
     if (!isFirebaseAvailable()) {
       throw new Error('Firebase is not configured. Please set up your Firebase project.');
     }

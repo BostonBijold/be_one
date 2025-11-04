@@ -1,19 +1,18 @@
+import AppHeader from '@/components/AppHeader';
+import { useTimerModal } from '@/context/TimerModalContext';
 import { useAuth } from '@/hooks/useAuth';
 import dataService, { DailyData, Habit, Routine } from '@/services/dataService';
-import AppHeader from '@/components/AppHeader';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter, useFocusEffect } from 'expo-router';
-import React, { useEffect, useState, useCallback } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   ScrollView,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTimerModal } from '@/context/TimerModalContext';
 
 const AGM_GREEN = '#4b5320';
 const AGM_DARK = '#333333';
@@ -88,6 +87,13 @@ export default function DashboardScreen() {
 
   // Load all data directly
   const loadData = async () => {
+    // Don't load data if user is not authenticated
+    if (!user) {
+      console.log('Dashboard - Skipping data load, no authenticated user');
+      setLoading(false);
+      return;
+    }
+
     try {
       console.log('Dashboard - Starting data load...');
       setLoading(true);
@@ -197,13 +203,13 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user]);
 
   // Refetch data when dashboard comes back into focus
   useFocusEffect(
     useCallback(() => {
       loadData();
-    }, [])
+    }, [user])
   );
 
   // Toggle routine expansion
@@ -437,6 +443,43 @@ export default function DashboardScreen() {
 
   // Get standalone habits (not in routines)
   const standaloneHabits = habits.filter((h) => !h.routineId);
+
+  // If no user is authenticated, show a message
+  if (!user) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: AGM_STONE }}>
+        <AppHeader />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 }}>
+          <MaterialCommunityIcons name="account-alert" size={64} color="#d1d5db" />
+          <Text style={{ fontSize: 18, fontWeight: '600', color: AGM_DARK, marginTop: 16, textAlign: 'center' }}>
+            Authentication Required
+          </Text>
+          <Text style={{ fontSize: 14, color: '#666666', marginTop: 8, textAlign: 'center' }}>
+            Please sign in to access your dashboard.
+          </Text>
+          <TouchableOpacity
+            style={{
+              backgroundColor: AGM_GREEN,
+              borderRadius: 12,
+              paddingVertical: 16,
+              paddingHorizontal: 32,
+              marginTop: 24,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.15,
+              shadowRadius: 8,
+              elevation: 5,
+            }}
+            onPress={() => router.push('/login')}
+          >
+            <Text style={{ color: 'white', fontSize: 16, fontWeight: '700' }}>
+              Sign In
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (loading) {
     return (

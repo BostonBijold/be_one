@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Platform,
   Text,
   TouchableOpacity,
   View,
@@ -14,8 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 WebBrowser.maybeCompleteAuthSession();
 
-// Check if we're on web
-const isWeb = typeof window !== 'undefined';
+// Check if we're on web - use Platform.OS for better detection
+const isWeb = Platform.OS === 'web';
 
 export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
@@ -28,6 +29,7 @@ export default function LoginScreen() {
         clientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
         iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || '',
         scopes: ['profile', 'email'],
+        redirectUri: 'exp://dagmrn',
       });
 
   // Handle the auth response - ONLY on React Native
